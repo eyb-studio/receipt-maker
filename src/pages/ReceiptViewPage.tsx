@@ -101,8 +101,8 @@ export function ReceiptViewPage() {
         </div>
       </div>
 
-      <div className="rounded-lg border bg-neutral-100 p-4 sm:p-8 dark:bg-neutral-900 print:border-0 print:bg-transparent print:p-0">
-        <div className="rounded-md shadow-lg print:shadow-none">
+      <div className="overflow-x-auto rounded-lg border bg-neutral-100 p-4 sm:p-8 dark:bg-neutral-900 print:overflow-visible print:border-0 print:bg-transparent print:p-0">
+        <div className="mx-auto w-fit rounded-md shadow-lg print:shadow-none">
           <ReceiptTemplate ref={ref} receipt={receipt} company={company} />
         </div>
       </div>

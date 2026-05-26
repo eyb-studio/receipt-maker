@@ -5,11 +5,17 @@ async function renderCanvas(node: HTMLElement): Promise<HTMLCanvasElement> {
   if (document.fonts && typeof document.fonts.ready?.then === "function") {
     await document.fonts.ready
   }
+  const nodeWidth = node.offsetWidth
+  const nodeHeight = node.offsetHeight
   return html2canvas(node, {
     scale: 2,
     backgroundColor: "#ffffff",
     useCORS: true,
     logging: false,
+    width: nodeWidth,
+    height: nodeHeight,
+    windowWidth: Math.max(nodeWidth, 1024),
+    windowHeight: Math.max(nodeHeight, 768),
   })
 }
 

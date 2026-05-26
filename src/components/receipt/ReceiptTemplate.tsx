@@ -54,7 +54,6 @@ export const ReceiptTemplate = forwardRef<HTMLDivElement, Props>(function Receip
         background: "#ffffff",
         color: "#171717",
         width: `${FIXED_WIDTH}px`,
-        maxWidth: "100%",
         marginLeft: "auto",
         marginRight: "auto",
         boxSizing: "border-box",
