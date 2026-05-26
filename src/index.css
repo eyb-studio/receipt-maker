@@ -2,6 +2,7 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/inter";
+@import "@fontsource-variable/vazirmatn";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -129,5 +130,21 @@
     }
   html {
     @apply font-sans;
+    }
+  html[lang="fa"], html[lang="ar"] {
+    font-family: "Vazirmatn Variable", "Vazirmatn", "Noto Sans Arabic", "Tahoma", "Inter Variable", sans-serif;
+    }
+}
+
+@media print {
+  body {
+    background: white !important;
+    }
+  header, nav, .print\:hidden {
+    display: none !important;
+    }
+  main {
+    padding: 0 !important;
+    max-width: none !important;
     }
 }
