@@ -19,15 +19,14 @@ import { useT } from "@/i18n/LanguageProvider"
 import { PageHeader } from "@/components/PageHeader"
 import { NumberStepper } from "@/components/NumberStepper"
 import { toLatinDigits } from "@/lib/digits"
-import { formatTotalWeight, toGrams } from "@/lib/formatters"
-import type { ReceiptItem, WeightUnit } from "@/types"
+import { formatTotalWeight, formatUnitWeight } from "@/lib/formatters"
+import type { ReceiptItem } from "@/types"
 
 type DraftItem = {
   id: string
   productId: string
   quantity: string
   weight: string
-  weightUnit: WeightUnit
 }
 
 function newDraftItem(): DraftItem {
@@ -36,7 +35,6 @@ function newDraftItem(): DraftItem {
     productId: "",
     quantity: "",
     weight: "",
-    weightUnit: "g",
   }
 }
 
@@ -69,21 +67,20 @@ export function ReceiptEditorPage() {
           productId: it.productId,
           quantity: String(it.quantity),
           weight: String(it.weight),
-          weightUnit: it.unitWeightUnit ?? "g",
         }))
       : [newDraftItem()]
   )
 
   const totals = useMemo(() => {
     let qty = 0
-    let grams = 0
+    let kg = 0
     for (const it of items) {
       const q = Number(it.quantity) || 0
       const w = Number(it.weight) || 0
       qty += q
-      grams += q * toGrams(w, it.weightUnit)
+      kg += q * w
     }
-    return { qty, grams }
+    return { qty, kg }
   }, [items])
 
   const updateItem = (id: string, patch: Partial<DraftItem>) => {
@@ -98,9 +95,8 @@ export function ReceiptEditorPage() {
         if (it.id !== id) return it
         const product = products.find((p) => p.id === productId)
         const unitValue = product?.unitWeight ?? 0
-        const unit: WeightUnit = product?.unitWeightUnit ?? "g"
         const weight = unitValue > 0 ? String(unitValue) : it.weight
-        return { ...it, productId, weight, weightUnit: unit }
+        return { ...it, productId, weight }
       })
     )
   }
@@ -126,7 +122,6 @@ export function ReceiptEditorPage() {
         colorName: product.colorName,
         colorHex: product.colorHex,
         unitWeight: product.unitWeight ?? 0,
-        unitWeightUnit: it.weightUnit,
         quantity: q,
         weight: w,
       })
@@ -218,19 +213,21 @@ export function ReceiptEditorPage() {
               </p>
             ) : (
               <>
-                <div className="text-muted-foreground hidden grid-cols-[1fr_150px_120px_40px] gap-2 text-xs font-medium uppercase sm:grid">
+                <div className="text-muted-foreground hidden grid-cols-[1fr_120px_120px_120px_40px] gap-2 text-xs font-medium uppercase sm:grid">
                   <div>{t.receipts.product}</div>
                   <div>{t.receipts.quantity}</div>
                   <div>{t.receipts.weight}</div>
+                  <div>{t.receipts.totalWeightCol}</div>
                   <div />
                 </div>
 
                 {items.map((item) => {
                   const product = products.find((p) => p.id === item.productId)
+                  const rowSum = (Number(item.quantity) || 0) * (Number(item.weight) || 0)
                   return (
                     <div
                       key={item.id}
-                      className="grid gap-2 sm:grid-cols-[1fr_150px_120px_40px] sm:items-center"
+                      className="grid gap-2 sm:grid-cols-[1fr_120px_120px_120px_40px] sm:items-center"
                     >
                       <Select
                         value={item.productId}
@@ -289,8 +286,16 @@ export function ReceiptEditorPage() {
                           }
                         />
                         <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-xs text-muted-foreground">
-                          {item.weightUnit}
+                          kg
                         </span>
+                      </div>
+                      <div
+                        dir="ltr"
+                        className="bg-muted/40 text-muted-foreground flex h-9 items-center justify-between rounded-md border px-3 text-sm tabular-nums"
+                        aria-label={t.receipts.totalWeightCol}
+                      >
+                        <span className="text-foreground">{formatUnitWeight(rowSum)}</span>
+                        <span className="text-xs">kg</span>
                       </div>
                       <Button
                         type="button"
@@ -321,7 +326,7 @@ export function ReceiptEditorPage() {
           <CardContent className="grid gap-4 sm:grid-cols-3">
             <Stat label={t.receipts.itemCount} value={String(items.filter((i) => i.productId).length)} />
             <Stat label={t.receipts.totalQuantity} value={String(totals.qty)} />
-            <Stat label={t.receipts.totalWeight} value={formatTotalWeight(totals.grams)} />
+            <Stat label={t.receipts.totalWeight} value={formatTotalWeight(totals.kg)} />
           </CardContent>
         </Card>
 

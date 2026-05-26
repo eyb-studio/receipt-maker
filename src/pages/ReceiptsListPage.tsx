@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useReceipts } from "@/lib/storage"
 import { useT } from "@/i18n/LanguageProvider"
-import { formatTotalWeight, toGrams } from "@/lib/formatters"
+import { formatTotalWeight } from "@/lib/formatters"
 import { PageHeader } from "@/components/PageHeader"
 import { EmptyState } from "@/components/EmptyState"
 
@@ -44,8 +44,8 @@ export function ReceiptsListPage() {
         <div className="grid gap-3">
           {receipts.map((r) => {
             const totalQty = r.items.reduce((s, it) => s + it.quantity, 0)
-            const totalGrams = r.items.reduce(
-              (s, it) => s + it.quantity * toGrams(it.weight, it.unitWeightUnit ?? "g"),
+            const totalKg = r.items.reduce(
+              (s, it) => s + it.quantity * it.weight,
               0
             )
             const dateStr = (() => {
@@ -77,7 +77,7 @@ export function ReceiptsListPage() {
                     <div className="flex items-center gap-6">
                       <Stat label={t.receipts.itemCount} value={String(r.items.length)} />
                       <Stat label={t.receipts.totalQuantity} value={String(totalQty)} />
-                      <Stat label={t.receipts.totalWeight} value={formatTotalWeight(totalGrams)} />
+                      <Stat label={t.receipts.totalWeight} value={formatTotalWeight(totalKg)} />
                     </div>
                   </CardContent>
                 </Card>

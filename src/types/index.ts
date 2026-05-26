@@ -13,15 +13,12 @@ export type Client = {
   createdAt: number
 }
 
-export type WeightUnit = "g" | "kg"
-
 export type Product = {
   id: string
   name: string
   colorName: string
   colorHex: string
   unitWeight: number
-  unitWeightUnit: WeightUnit
   createdAt: number
 }
 
@@ -32,7 +29,6 @@ export type ReceiptItem = {
   colorName: string
   colorHex: string
   unitWeight: number
-  unitWeightUnit: WeightUnit
   quantity: number
   weight: number
 }

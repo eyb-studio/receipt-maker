@@ -7,7 +7,22 @@ const KEYS = {
   products: "receipt-maker:products",
   receipts: "receipt-maker:receipts",
   counter: "receipt-maker:receipt-counter",
+  schemaVersion: "receipt-maker:schema-version",
 } as const
+
+const SCHEMA_VERSION = 2
+
+if (typeof window !== "undefined") {
+  try {
+    const current = Number(window.localStorage.getItem(KEYS.schemaVersion) ?? "1")
+    if (current < SCHEMA_VERSION) {
+      // v2 — weights are kg-only; legacy mixed-unit data is dropped
+      window.localStorage.removeItem(KEYS.products)
+      window.localStorage.removeItem(KEYS.receipts)
+      window.localStorage.setItem(KEYS.schemaVersion, String(SCHEMA_VERSION))
+    }
+  } catch {}
+}
 
 function readJSON<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback

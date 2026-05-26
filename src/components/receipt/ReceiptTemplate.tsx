@@ -1,7 +1,7 @@
 import { forwardRef } from "react"
 import { Receipt } from "lucide-react"
 import { useLanguage, useT } from "@/i18n/LanguageProvider"
-import { formatTotalWeight, formatUnitWeight, toGrams } from "@/lib/formatters"
+import { formatTotalWeight, formatUnitWeight } from "@/lib/formatters"
 import type { Company, Receipt as ReceiptType } from "@/types"
 
 type Props = {
@@ -19,8 +19,8 @@ export const ReceiptTemplate = forwardRef<HTMLDivElement, Props>(function Receip
   const { dir, language } = useLanguage()
 
   const totalQty = receipt.items.reduce((s, it) => s + it.quantity, 0)
-  const totalGrams = receipt.items.reduce(
-    (s, it) => s + it.quantity * toGrams(it.weight, it.unitWeightUnit ?? "g"),
+  const totalKg = receipt.items.reduce(
+    (s, it) => s + it.quantity * it.weight,
     0
   )
 
@@ -200,7 +200,7 @@ export const ReceiptTemplate = forwardRef<HTMLDivElement, Props>(function Receip
                     fontVariantNumeric: "tabular-nums",
                   }}
                 >
-                  {formatUnitWeight(item.weight, item.unitWeightUnit ?? "g")}
+                  {formatUnitWeight(item.weight)}
                 </td>
                 <td
                   style={{
@@ -210,7 +210,7 @@ export const ReceiptTemplate = forwardRef<HTMLDivElement, Props>(function Receip
                     fontWeight: 500,
                   }}
                 >
-                  {formatTotalWeight(item.quantity * toGrams(item.weight, item.unitWeightUnit ?? "g"))}
+                  {formatUnitWeight(item.quantity * item.weight)}
                 </td>
               </tr>
             )
@@ -260,7 +260,7 @@ export const ReceiptTemplate = forwardRef<HTMLDivElement, Props>(function Receip
                 borderTop: "1px solid #d4d4d4",
               }}
             >
-              {formatTotalWeight(totalGrams)}
+              {formatTotalWeight(totalKg)}
             </td>
           </tr>
         </tfoot>
