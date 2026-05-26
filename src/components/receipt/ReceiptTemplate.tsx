@@ -1,6 +1,7 @@
 import { forwardRef } from "react"
 import { Receipt } from "lucide-react"
 import { useLanguage, useT } from "@/i18n/LanguageProvider"
+import { formatTotalWeight, formatUnitWeight, toGrams } from "@/lib/formatters"
 import type { Company, Receipt as ReceiptType } from "@/types"
 
 type Props = {
@@ -8,7 +9,7 @@ type Props = {
   company: Company
 }
 
-const FIXED_WIDTH = 672
+const FIXED_WIDTH = 760
 
 export const ReceiptTemplate = forwardRef<HTMLDivElement, Props>(function ReceiptTemplate(
   { receipt, company },
@@ -18,8 +19,9 @@ export const ReceiptTemplate = forwardRef<HTMLDivElement, Props>(function Receip
   const { dir, language } = useLanguage()
 
   const totalQty = receipt.items.reduce((s, it) => s + it.quantity, 0)
-  const totalWeight = Number(
-    receipt.items.reduce((s, it) => s + it.quantity * it.weight, 0).toFixed(3)
+  const totalGrams = receipt.items.reduce(
+    (s, it) => s + it.quantity * toGrams(it.weight, it.unitWeightUnit ?? "g"),
+    0
   )
 
   const formattedDate = (() => {
@@ -152,6 +154,9 @@ export const ReceiptTemplate = forwardRef<HTMLDivElement, Props>(function Receip
             <th style={{ padding: cellPadding, textAlign: "end", fontWeight: 600 }}>
               {t.receipts.weight}
             </th>
+            <th style={{ padding: cellPadding, textAlign: "end", fontWeight: 600 }}>
+              {t.receipts.totalWeightCol}
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -195,7 +200,17 @@ export const ReceiptTemplate = forwardRef<HTMLDivElement, Props>(function Receip
                     fontVariantNumeric: "tabular-nums",
                   }}
                 >
-                  {item.weight}
+                  {formatUnitWeight(item.weight, item.unitWeightUnit ?? "g")}
+                </td>
+                <td
+                  style={{
+                    ...cellStyle,
+                    textAlign: "end",
+                    fontVariantNumeric: "tabular-nums",
+                    fontWeight: 500,
+                  }}
+                >
+                  {formatTotalWeight(item.quantity * toGrams(item.weight, item.unitWeightUnit ?? "g"))}
                 </td>
               </tr>
             )
@@ -230,6 +245,13 @@ export const ReceiptTemplate = forwardRef<HTMLDivElement, Props>(function Receip
             <td
               style={{
                 padding: footerCellPadding,
+                background: "#f5f5f5",
+                borderTop: "1px solid #d4d4d4",
+              }}
+            />
+            <td
+              style={{
+                padding: footerCellPadding,
                 textAlign: "end",
                 fontWeight: 700,
                 fontVariantNumeric: "tabular-nums",
@@ -238,7 +260,7 @@ export const ReceiptTemplate = forwardRef<HTMLDivElement, Props>(function Receip
                 borderTop: "1px solid #d4d4d4",
               }}
             >
-              {totalWeight}
+              {formatTotalWeight(totalGrams)}
             </td>
           </tr>
         </tfoot>

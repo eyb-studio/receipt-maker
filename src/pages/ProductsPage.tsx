@@ -17,8 +17,16 @@ import { useT } from "@/i18n/LanguageProvider"
 import { PageHeader } from "@/components/PageHeader"
 import { EmptyState } from "@/components/EmptyState"
 import { ConfirmDialog } from "@/components/ConfirmDialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { toLatinDigits } from "@/lib/digits"
-import type { Product } from "@/types"
+import { formatUnitWeight } from "@/lib/formatters"
+import type { Product, WeightUnit } from "@/types"
 
 const PRESET_COLORS = [
   "#ef4444",
@@ -47,15 +55,18 @@ export function ProductsPage() {
   const [open, setOpen] = useState(false)
   const [toDelete, setToDelete] = useState<Product | null>(null)
   const [color, setColor] = useState("#8b5cf6")
+  const [unit, setUnit] = useState<WeightUnit>("g")
 
   const openCreate = () => {
     setEditing(null)
     setColor("#8b5cf6")
+    setUnit("g")
     setOpen(true)
   }
   const openEdit = (product: Product) => {
     setEditing(product)
     setColor(product.colorHex)
+    setUnit(product.unitWeightUnit ?? "g")
     setOpen(true)
   }
 
@@ -66,7 +77,7 @@ export function ProductsPage() {
     const colorName = String(fd.get("colorName") ?? "").trim()
     const unitWeight = Number(toLatinDigits(String(fd.get("unitWeight") ?? ""))) || 0
     if (!name || !colorName) return
-    const data = { name, colorName, colorHex: color, unitWeight }
+    const data = { name, colorName, colorHex: color, unitWeight, unitWeightUnit: unit }
     if (editing) {
       updateProduct(editing.id, data)
       toast.success(t.common.updated)
@@ -117,7 +128,7 @@ export function ProductsPage() {
                     <div className="text-muted-foreground truncate text-sm">
                       {product.colorName}
                       {(product.unitWeight ?? 0) > 0
-                        ? ` · ${product.unitWeight} / ${t.receipts.quantity}`
+                        ? ` · ${formatUnitWeight(product.unitWeight, product.unitWeightUnit ?? "g")}`
                         : ""}
                     </div>
                   </div>
@@ -170,20 +181,31 @@ export function ProductsPage() {
             </div>
             <div className="grid gap-2">
               <Label htmlFor="unitWeight">{t.products.unitWeight}</Label>
-              <Input
-                id="unitWeight"
-                name="unitWeight"
-                type="text"
-                inputMode="decimal"
-                dir="ltr"
-                defaultValue={editing?.unitWeight ? String(editing.unitWeight) : ""}
-                placeholder="0"
-                onChange={(e) => {
-                  e.target.value = e.target.value.replace(/[۰-۹٠-٩]/g, (d) =>
-                    String("۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩".indexOf(d) % 10)
-                  )
-                }}
-              />
+              <div className="grid grid-cols-[1fr_110px] gap-2">
+                <Input
+                  id="unitWeight"
+                  name="unitWeight"
+                  type="text"
+                  inputMode="decimal"
+                  dir="ltr"
+                  defaultValue={editing?.unitWeight ? String(editing.unitWeight) : ""}
+                  placeholder="0"
+                  onChange={(e) => {
+                    e.target.value = e.target.value.replace(/[۰-۹٠-٩]/g, (d) =>
+                      String("۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩".indexOf(d) % 10)
+                    )
+                  }}
+                />
+                <Select value={unit} onValueChange={(v) => setUnit(v as WeightUnit)}>
+                  <SelectTrigger aria-label={t.products.unit}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="g">g</SelectItem>
+                    <SelectItem value="kg">kg</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <p className="text-muted-foreground text-xs">{t.products.unitWeightHint}</p>
             </div>
             <div className="grid gap-2">

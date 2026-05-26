@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useReceipts } from "@/lib/storage"
 import { useT } from "@/i18n/LanguageProvider"
+import { formatTotalWeight, toGrams } from "@/lib/formatters"
 import { PageHeader } from "@/components/PageHeader"
 import { EmptyState } from "@/components/EmptyState"
 
@@ -43,8 +44,9 @@ export function ReceiptsListPage() {
         <div className="grid gap-3">
           {receipts.map((r) => {
             const totalQty = r.items.reduce((s, it) => s + it.quantity, 0)
-            const totalWeight = Number(
-              r.items.reduce((s, it) => s + it.quantity * it.weight, 0).toFixed(3)
+            const totalGrams = r.items.reduce(
+              (s, it) => s + it.quantity * toGrams(it.weight, it.unitWeightUnit ?? "g"),
+              0
             )
             const dateStr = (() => {
               try {
@@ -73,9 +75,9 @@ export function ReceiptsListPage() {
                       <div className="text-muted-foreground mt-1 text-sm">{dateStr}</div>
                     </div>
                     <div className="flex items-center gap-6">
-                      <Stat label={t.receipts.itemCount} value={r.items.length} />
-                      <Stat label={t.receipts.totalQuantity} value={totalQty} />
-                      <Stat label={t.receipts.totalWeight} value={totalWeight} />
+                      <Stat label={t.receipts.itemCount} value={String(r.items.length)} />
+                      <Stat label={t.receipts.totalQuantity} value={String(totalQty)} />
+                      <Stat label={t.receipts.totalWeight} value={formatTotalWeight(totalGrams)} />
                     </div>
                   </CardContent>
                 </Card>
@@ -88,12 +90,11 @@ export function ReceiptsListPage() {
   )
 }
 
-function Stat({ label, value }: { label: string; value: number }) {
-  const display = Number.isInteger(value) ? value : Number(value.toFixed(2))
+function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="text-end">
       <div className="text-muted-foreground text-xs uppercase">{label}</div>
-      <div className="text-base font-semibold tabular-nums">{display}</div>
+      <div className="text-base font-semibold tabular-nums">{value}</div>
     </div>
   )
 }

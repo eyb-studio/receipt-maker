@@ -19,17 +19,25 @@ import { useT } from "@/i18n/LanguageProvider"
 import { PageHeader } from "@/components/PageHeader"
 import { NumberStepper } from "@/components/NumberStepper"
 import { toLatinDigits } from "@/lib/digits"
-import type { ReceiptItem } from "@/types"
+import { formatTotalWeight, toGrams } from "@/lib/formatters"
+import type { ReceiptItem, WeightUnit } from "@/types"
 
 type DraftItem = {
   id: string
   productId: string
   quantity: string
   weight: string
+  weightUnit: WeightUnit
 }
 
 function newDraftItem(): DraftItem {
-  return { id: crypto.randomUUID(), productId: "", quantity: "", weight: "" }
+  return {
+    id: crypto.randomUUID(),
+    productId: "",
+    quantity: "",
+    weight: "",
+    weightUnit: "g",
+  }
 }
 
 function todayISO(): string {
@@ -61,20 +69,21 @@ export function ReceiptEditorPage() {
           productId: it.productId,
           quantity: String(it.quantity),
           weight: String(it.weight),
+          weightUnit: it.unitWeightUnit ?? "g",
         }))
       : [newDraftItem()]
   )
 
   const totals = useMemo(() => {
     let qty = 0
-    let weight = 0
+    let grams = 0
     for (const it of items) {
       const q = Number(it.quantity) || 0
       const w = Number(it.weight) || 0
       qty += q
-      weight += q * w
+      grams += q * toGrams(w, it.weightUnit)
     }
-    return { qty, weight: Number(weight.toFixed(3)) }
+    return { qty, grams }
   }, [items])
 
   const updateItem = (id: string, patch: Partial<DraftItem>) => {
@@ -88,9 +97,10 @@ export function ReceiptEditorPage() {
       prev.map((it) => {
         if (it.id !== id) return it
         const product = products.find((p) => p.id === productId)
-        const unit = product?.unitWeight ?? 0
-        const weight = unit > 0 ? String(unit) : it.weight
-        return { ...it, productId, weight }
+        const unitValue = product?.unitWeight ?? 0
+        const unit: WeightUnit = product?.unitWeightUnit ?? "g"
+        const weight = unitValue > 0 ? String(unitValue) : it.weight
+        return { ...it, productId, weight, weightUnit: unit }
       })
     )
   }
@@ -116,6 +126,7 @@ export function ReceiptEditorPage() {
         colorName: product.colorName,
         colorHex: product.colorHex,
         unitWeight: product.unitWeight ?? 0,
+        unitWeightUnit: it.weightUnit,
         quantity: q,
         weight: w,
       })
@@ -265,16 +276,22 @@ export function ReceiptEditorPage() {
                         ariaLabel={t.receipts.quantity}
                         onChange={(v) => setItemQuantity(item.id, v)}
                       />
-                      <Input
-                        type="text"
-                        inputMode="decimal"
-                        dir="ltr"
-                        placeholder={t.receipts.weight}
-                        value={item.weight}
-                        onChange={(e) =>
-                          updateItem(item.id, { weight: toLatinDigits(e.target.value) })
-                        }
-                      />
+                      <div className="relative" dir="ltr">
+                        <Input
+                          type="text"
+                          inputMode="decimal"
+                          dir="ltr"
+                          className="pr-9"
+                          placeholder={t.receipts.weight}
+                          value={item.weight}
+                          onChange={(e) =>
+                            updateItem(item.id, { weight: toLatinDigits(e.target.value) })
+                          }
+                        />
+                        <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-xs text-muted-foreground">
+                          {item.weightUnit}
+                        </span>
+                      </div>
                       <Button
                         type="button"
                         variant="ghost"
@@ -302,9 +319,9 @@ export function ReceiptEditorPage() {
 
         <Card>
           <CardContent className="grid gap-4 sm:grid-cols-3">
-            <Stat label={t.receipts.itemCount} value={items.filter((i) => i.productId).length} />
-            <Stat label={t.receipts.totalQuantity} value={totals.qty} />
-            <Stat label={t.receipts.totalWeight} value={totals.weight} />
+            <Stat label={t.receipts.itemCount} value={String(items.filter((i) => i.productId).length)} />
+            <Stat label={t.receipts.totalQuantity} value={String(totals.qty)} />
+            <Stat label={t.receipts.totalWeight} value={formatTotalWeight(totals.grams)} />
           </CardContent>
         </Card>
 
@@ -333,8 +350,8 @@ export function ReceiptEditorPage() {
   )
 }
 
-function Stat({ label, value }: { label: string; value: number }) {
-  const display = Number.isInteger(value) ? value : Number(value.toFixed(2))
+function Stat({ label, value }: { label: string; value: string }) {
+  const display = value
   return (
     <div className="bg-muted/40 rounded-md p-3">
       <div className="text-muted-foreground text-xs uppercase">{label}</div>
