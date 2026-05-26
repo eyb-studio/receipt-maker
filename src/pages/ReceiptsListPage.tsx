@@ -4,16 +4,13 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useReceipts } from "@/lib/storage"
-import { useLanguage, useT } from "@/i18n/LanguageProvider"
+import { useT } from "@/i18n/LanguageProvider"
 import { PageHeader } from "@/components/PageHeader"
 import { EmptyState } from "@/components/EmptyState"
 
 export function ReceiptsListPage() {
   const t = useT()
-  const { language } = useLanguage()
   const { receipts } = useReceipts()
-  const locale =
-    language === "fa" ? "fa-IR-u-nu-latn" : language === "ar" ? "ar-u-nu-latn" : "en-US"
 
   return (
     <>
@@ -51,7 +48,7 @@ export function ReceiptsListPage() {
             )
             const dateStr = (() => {
               try {
-                return new Date(r.date).toLocaleDateString(locale, {
+                return new Date(r.date).toLocaleDateString("en-US", {
                   year: "numeric",
                   month: "short",
                   day: "numeric",

@@ -21,12 +21,10 @@ export const ReceiptTemplate = forwardRef<HTMLDivElement, Props>(function Receip
   const totalWeight = Number(
     receipt.items.reduce((s, it) => s + it.quantity * it.weight, 0).toFixed(3)
   )
-  const locale =
-    language === "fa" ? "fa-IR-u-nu-latn" : language === "ar" ? "ar-u-nu-latn" : "en-US"
 
   const formattedDate = (() => {
     try {
-      return new Date(receipt.date).toLocaleDateString(locale, {
+      return new Date(receipt.date).toLocaleDateString("en-US", {
         year: "numeric",
         month: "long",
         day: "numeric",
