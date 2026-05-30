@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
 import { toast } from "sonner"
 import { useCompany } from "@/lib/storage"
 import { useLanguage, useT } from "@/i18n/LanguageProvider"
@@ -21,6 +22,7 @@ import {
   useUnsavedChangesGuard,
   UnsavedChangesPrompt,
 } from "@/hooks/useUnsavedChangesGuard"
+import { DEFAULT_RECEIPT_COLUMNS, type ReceiptColumns } from "@/types"
 
 function readFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -147,6 +149,44 @@ export function SettingsPage() {
                 {t.actions.save}
               </Button>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>{t.settings.columns}</CardTitle>
+            <CardDescription>{t.settings.columnsDesc}</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-3">
+            {([
+              ["sign", t.settings.showSign],
+              ["count", t.settings.showCount],
+              ["unitWeight", t.settings.showUnitWeight],
+              ["totalWeight", t.settings.showTotalWeight],
+            ] as const).map(([key, label]) => {
+              const columns: ReceiptColumns = {
+                ...DEFAULT_RECEIPT_COLUMNS,
+                ...(company.receiptColumns ?? {}),
+              }
+              const id = `col-${key}`
+              return (
+                <div key={key} className="flex items-center justify-between gap-3 rounded-md border p-3">
+                  <Label htmlFor={id} className="cursor-pointer">
+                    {label}
+                  </Label>
+                  <Switch
+                    id={id}
+                    checked={columns[key]}
+                    onCheckedChange={(checked) => {
+                      setCompany({
+                        ...company,
+                        receiptColumns: { ...columns, [key]: checked },
+                      })
+                    }}
+                  />
+                </div>
+              )
+            })}
           </CardContent>
         </Card>
 

@@ -2,7 +2,7 @@ import { forwardRef } from "react"
 import { Receipt } from "lucide-react"
 import { useLanguage, useT } from "@/i18n/LanguageProvider"
 import { formatTotalWeight, formatUnitWeight } from "@/lib/formatters"
-import type { Company, Receipt as ReceiptType } from "@/types"
+import { DEFAULT_RECEIPT_COLUMNS, type Company, type Receipt as ReceiptType } from "@/types"
 
 type Props = {
   receipt: ReceiptType
@@ -23,6 +23,9 @@ export const ReceiptTemplate = forwardRef<HTMLDivElement, Props>(function Receip
     (s, it) => s + it.quantity * it.weight,
     0
   )
+
+  const columns = { ...DEFAULT_RECEIPT_COLUMNS, ...(company.receiptColumns ?? {}) }
+  const labelColSpan = 1 + (columns.sign ? 1 : 0)
 
   const formattedDate = (() => {
     try {
@@ -145,18 +148,26 @@ export const ReceiptTemplate = forwardRef<HTMLDivElement, Props>(function Receip
             <th style={{ padding: cellPadding, textAlign: "start", fontWeight: 600 }}>
               {t.receipts.product}
             </th>
-            <th style={{ padding: cellPadding, textAlign: "start", fontWeight: 600 }}>
-              {t.receipts.sign}
-            </th>
-            <th style={{ padding: cellPadding, textAlign: "end", fontWeight: 600 }}>
-              {t.receipts.quantity}
-            </th>
-            <th style={{ padding: cellPadding, textAlign: "end", fontWeight: 600 }}>
-              {t.receipts.weight}
-            </th>
-            <th style={{ padding: cellPadding, textAlign: "end", fontWeight: 600 }}>
-              {t.receipts.totalWeightCol}
-            </th>
+            {columns.sign ? (
+              <th style={{ padding: cellPadding, textAlign: "start", fontWeight: 600 }}>
+                {t.receipts.sign}
+              </th>
+            ) : null}
+            {columns.count ? (
+              <th style={{ padding: cellPadding, textAlign: "end", fontWeight: 600 }}>
+                {t.receipts.quantity}
+              </th>
+            ) : null}
+            {columns.unitWeight ? (
+              <th style={{ padding: cellPadding, textAlign: "end", fontWeight: 600 }}>
+                {t.receipts.weight}
+              </th>
+            ) : null}
+            {columns.totalWeight ? (
+              <th style={{ padding: cellPadding, textAlign: "end", fontWeight: 600 }}>
+                {t.receipts.totalWeightCol}
+              </th>
+            ) : null}
           </tr>
         </thead>
         <tbody>
@@ -169,49 +180,57 @@ export const ReceiptTemplate = forwardRef<HTMLDivElement, Props>(function Receip
             return (
               <tr key={item.id}>
                 <td style={{ ...cellStyle, fontWeight: 500 }}>{item.productName}</td>
-                <td style={cellStyle}>
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
-                    <span
-                      style={{
-                        display: "inline-block",
-                        width: "12px",
-                        height: "12px",
-                        borderRadius: "9999px",
-                        background: item.colorHex,
-                        border: "1px solid rgba(0,0,0,0.1)",
-                      }}
-                    />
-                    <span>{item.colorName}</span>
-                  </span>
-                </td>
-                <td
-                  style={{
-                    ...cellStyle,
-                    textAlign: "end",
-                    fontVariantNumeric: "tabular-nums",
-                  }}
-                >
-                  {item.quantity}
-                </td>
-                <td
-                  style={{
-                    ...cellStyle,
-                    textAlign: "end",
-                    fontVariantNumeric: "tabular-nums",
-                  }}
-                >
-                  {formatUnitWeight(item.weight)}
-                </td>
-                <td
-                  style={{
-                    ...cellStyle,
-                    textAlign: "end",
-                    fontVariantNumeric: "tabular-nums",
-                    fontWeight: 500,
-                  }}
-                >
-                  {formatUnitWeight(item.quantity * item.weight)}
-                </td>
+                {columns.sign ? (
+                  <td style={cellStyle}>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
+                      <span
+                        style={{
+                          display: "inline-block",
+                          width: "12px",
+                          height: "12px",
+                          borderRadius: "9999px",
+                          background: item.colorHex,
+                          border: "1px solid rgba(0,0,0,0.1)",
+                        }}
+                      />
+                      <span>{item.colorName}</span>
+                    </span>
+                  </td>
+                ) : null}
+                {columns.count ? (
+                  <td
+                    style={{
+                      ...cellStyle,
+                      textAlign: "end",
+                      fontVariantNumeric: "tabular-nums",
+                    }}
+                  >
+                    {item.quantity}
+                  </td>
+                ) : null}
+                {columns.unitWeight ? (
+                  <td
+                    style={{
+                      ...cellStyle,
+                      textAlign: "end",
+                      fontVariantNumeric: "tabular-nums",
+                    }}
+                  >
+                    {formatUnitWeight(item.weight)}
+                  </td>
+                ) : null}
+                {columns.totalWeight ? (
+                  <td
+                    style={{
+                      ...cellStyle,
+                      textAlign: "end",
+                      fontVariantNumeric: "tabular-nums",
+                      fontWeight: 500,
+                    }}
+                  >
+                    {formatUnitWeight(item.quantity * item.weight)}
+                  </td>
+                ) : null}
               </tr>
             )
           })}
@@ -219,7 +238,7 @@ export const ReceiptTemplate = forwardRef<HTMLDivElement, Props>(function Receip
         <tfoot>
           <tr>
             <td
-              colSpan={2}
+              colSpan={labelColSpan}
               style={{
                 padding: footerCellPadding,
                 fontWeight: 600,
@@ -229,39 +248,45 @@ export const ReceiptTemplate = forwardRef<HTMLDivElement, Props>(function Receip
             >
               {t.common.total}
             </td>
-            <td
-              style={{
-                padding: footerCellPadding,
-                textAlign: "end",
-                fontWeight: 700,
-                fontVariantNumeric: "tabular-nums",
-                background: "#f5f5f5",
-                color: company.accentColor,
-                borderTop: "1px solid #d4d4d4",
-              }}
-            >
-              {totalQty}
-            </td>
-            <td
-              style={{
-                padding: footerCellPadding,
-                background: "#f5f5f5",
-                borderTop: "1px solid #d4d4d4",
-              }}
-            />
-            <td
-              style={{
-                padding: footerCellPadding,
-                textAlign: "end",
-                fontWeight: 700,
-                fontVariantNumeric: "tabular-nums",
-                background: "#f5f5f5",
-                color: company.accentColor,
-                borderTop: "1px solid #d4d4d4",
-              }}
-            >
-              {formatTotalWeight(totalKg)}
-            </td>
+            {columns.count ? (
+              <td
+                style={{
+                  padding: footerCellPadding,
+                  textAlign: "end",
+                  fontWeight: 700,
+                  fontVariantNumeric: "tabular-nums",
+                  background: "#f5f5f5",
+                  color: company.accentColor,
+                  borderTop: "1px solid #d4d4d4",
+                }}
+              >
+                {totalQty}
+              </td>
+            ) : null}
+            {columns.unitWeight ? (
+              <td
+                style={{
+                  padding: footerCellPadding,
+                  background: "#f5f5f5",
+                  borderTop: "1px solid #d4d4d4",
+                }}
+              />
+            ) : null}
+            {columns.totalWeight ? (
+              <td
+                style={{
+                  padding: footerCellPadding,
+                  textAlign: "end",
+                  fontWeight: 700,
+                  fontVariantNumeric: "tabular-nums",
+                  background: "#f5f5f5",
+                  color: company.accentColor,
+                  borderTop: "1px solid #d4d4d4",
+                }}
+              >
+                {formatTotalWeight(totalKg)}
+              </td>
+            ) : null}
           </tr>
         </tfoot>
       </table>

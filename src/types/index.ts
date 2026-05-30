@@ -1,8 +1,23 @@
+export type ReceiptColumns = {
+  sign: boolean
+  count: boolean
+  unitWeight: boolean
+  totalWeight: boolean
+}
+
+export const DEFAULT_RECEIPT_COLUMNS: ReceiptColumns = {
+  sign: true,
+  count: true,
+  unitWeight: true,
+  totalWeight: true,
+}
+
 export type Company = {
   name: string
   logo?: string
   primaryColor: string
   accentColor: string
+  receiptColumns?: ReceiptColumns
 }
 
 export type Client = {
