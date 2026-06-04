@@ -22,6 +22,11 @@ export function formatMoney(value: number): string {
   return `AED ${moneyFormatter.format(value)}`
 }
 
+export function formatAmount(value: number): string {
+  if (!isFinite(value)) return "0"
+  return moneyFormatter.format(value)
+}
+
 export function rowBalance(row: {
   invoice: number
   commission: number

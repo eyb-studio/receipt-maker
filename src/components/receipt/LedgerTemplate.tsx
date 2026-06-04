@@ -1,7 +1,7 @@
 import { forwardRef } from "react"
 import { ClipboardList } from "lucide-react"
 import { useLanguage, useT } from "@/i18n/LanguageProvider"
-import { formatMoney, rowBalance } from "@/lib/formatters"
+import { formatAmount, formatMoney, rowBalance } from "@/lib/formatters"
 import type { Company, Ledger as LedgerType } from "@/types"
 
 type Props = {
@@ -187,13 +187,13 @@ export const LedgerTemplate = forwardRef<HTMLDivElement, Props>(function LedgerT
                   {formatRowDate(row.date)}
                 </td>
                 <td style={{ ...cellStyle, ...numCellBase }}>
-                  {formatMoney(row.invoice)}
+                  {formatAmount(row.invoice)}
                 </td>
                 <td style={{ ...cellStyle, ...numCellBase }}>
-                  {formatMoney(row.commission)}
+                  {formatAmount(row.commission)}
                 </td>
                 <td style={{ ...cellStyle, ...numCellBase }}>
-                  {formatMoney(row.cash)}
+                  {formatAmount(row.cash)}
                 </td>
                 <td
                   style={{
@@ -203,7 +203,7 @@ export const LedgerTemplate = forwardRef<HTMLDivElement, Props>(function LedgerT
                     color: company.accentColor,
                   }}
                 >
-                  {formatMoney(cumulativeBalances[idx])}
+                  {formatAmount(cumulativeBalances[idx])}
                 </td>
               </tr>
             )

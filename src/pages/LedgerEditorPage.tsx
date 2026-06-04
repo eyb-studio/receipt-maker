@@ -11,7 +11,7 @@ import { useLedgers } from "@/lib/storage"
 import { useT } from "@/i18n/LanguageProvider"
 import { PageHeader } from "@/components/PageHeader"
 import { toLatinDigits } from "@/lib/digits"
-import { formatMoney } from "@/lib/formatters"
+import { formatAmount, formatMoney } from "@/lib/formatters"
 import type { LedgerRow } from "@/types"
 
 type DraftRow = {
@@ -229,7 +229,7 @@ export function LedgerEditorPage() {
                   className="bg-muted/40 text-foreground flex h-9 items-center justify-end rounded-md border px-3 text-sm tabular-nums"
                   aria-label={t.ledgers.balance}
                 >
-                  {formatMoney(cumulativeBalances[idx])}
+                  {formatAmount(cumulativeBalances[idx])}
                 </div>
                 <Button
                   type="button"
