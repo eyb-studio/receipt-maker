@@ -6,6 +6,9 @@ import { LanguageProvider } from "@/i18n/LanguageProvider"
 import { ReceiptsListPage } from "@/pages/ReceiptsListPage"
 import { ReceiptEditorPage } from "@/pages/ReceiptEditorPage"
 import { ReceiptViewPage } from "@/pages/ReceiptViewPage"
+import { LedgersListPage } from "@/pages/LedgersListPage"
+import { LedgerEditorPage } from "@/pages/LedgerEditorPage"
+import { LedgerViewPage } from "@/pages/LedgerViewPage"
 import { ClientsPage } from "@/pages/ClientsPage"
 import { ProductsPage } from "@/pages/ProductsPage"
 import { SettingsPage } from "@/pages/SettingsPage"
@@ -18,6 +21,10 @@ const router = createBrowserRouter([
       { path: "receipts/new", element: <ReceiptEditorPage /> },
       { path: "receipts/:id", element: <ReceiptViewPage /> },
       { path: "receipts/:id/edit", element: <ReceiptEditorPage /> },
+      { path: "ledgers", element: <LedgersListPage /> },
+      { path: "ledgers/new", element: <LedgerEditorPage /> },
+      { path: "ledgers/:id", element: <LedgerViewPage /> },
+      { path: "ledgers/:id/edit", element: <LedgerEditorPage /> },
       { path: "clients", element: <ClientsPage /> },
       { path: "products", element: <ProductsPage /> },
       { path: "settings", element: <SettingsPage /> },

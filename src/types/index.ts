@@ -58,3 +58,22 @@ export type Receipt = {
   notes?: string
   createdAt: number
 }
+
+export type LedgerRow = {
+  id: string
+  name: string
+  date?: string // per-row date (ISO yyyy-mm-dd)
+  invoice: number // فاکتور (debit)
+  commission: number // حق / كارمزد (debit)
+  cash: number // صرافي (credit)
+}
+
+export type Ledger = {
+  id: string
+  number: number
+  title: string // e.g. "حساب شوکت"
+  date: string
+  rows: LedgerRow[]
+  notes?: string
+  createdAt: number
+}

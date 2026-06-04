@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react"
-import type { Client, Company, Product, Receipt } from "@/types"
+import type { Client, Company, Ledger, Product, Receipt } from "@/types"
 
 const KEYS = {
   company: "receipt-maker:company",
@@ -7,6 +7,8 @@ const KEYS = {
   products: "receipt-maker:products",
   receipts: "receipt-maker:receipts",
   counter: "receipt-maker:receipt-counter",
+  ledgers: "receipt-maker:ledgers",
+  ledgerCounter: "receipt-maker:ledger-counter",
   schemaVersion: "receipt-maker:schema-version",
 } as const
 
@@ -165,4 +167,38 @@ export function useReceipts() {
   const getReceipt = (id: string) => receipts.find((r) => r.id === id)
 
   return { receipts, addReceipt, updateReceipt, deleteReceipt, getReceipt }
+}
+
+function nextLedgerNumber(): number {
+  const current = readJSON<number>(KEYS.ledgerCounter, 1000)
+  const next = current + 1
+  writeJSON(KEYS.ledgerCounter, next)
+  return next
+}
+
+export function useLedgers() {
+  const [ledgers, setLedgers] = useStored<Ledger[]>(KEYS.ledgers, [])
+
+  const addLedger = (data: Omit<Ledger, "id" | "createdAt" | "number">) => {
+    const ledger: Ledger = {
+      ...data,
+      id: crypto.randomUUID(),
+      number: nextLedgerNumber(),
+      createdAt: Date.now(),
+    }
+    setLedgers((prev) => [ledger, ...prev])
+    return ledger
+  }
+
+  const updateLedger = (id: string, data: Partial<Omit<Ledger, "id" | "createdAt" | "number">>) => {
+    setLedgers((prev) => prev.map((l) => (l.id === id ? { ...l, ...data } : l)))
+  }
+
+  const deleteLedger = (id: string) => {
+    setLedgers((prev) => prev.filter((l) => l.id !== id))
+  }
+
+  const getLedger = (id: string) => ledgers.find((l) => l.id === id)
+
+  return { ledgers, addLedger, updateLedger, deleteLedger, getLedger }
 }
