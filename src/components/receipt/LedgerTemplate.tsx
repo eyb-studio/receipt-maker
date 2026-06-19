@@ -42,7 +42,7 @@ export const LedgerTemplate = forwardRef<HTMLDivElement, Props>(function LedgerT
     try {
       return new Date(value).toLocaleDateString("en-US", {
         year: "numeric",
-        month: "short",
+        month: "numeric",
         day: "numeric",
       })
     } catch {
@@ -156,9 +156,6 @@ export const LedgerTemplate = forwardRef<HTMLDivElement, Props>(function LedgerT
             <th style={{ padding: cellPadding, textAlign: "start", fontWeight: 600 }}>
               {t.ledgers.name}
             </th>
-            <th style={{ padding: cellPadding, textAlign: "start", fontWeight: 600 }}>
-              {t.common.date}
-            </th>
             <th style={{ padding: cellPadding, textAlign: "end", fontWeight: 600 }}>
               {t.ledgers.invoice}
             </th>
@@ -170,6 +167,9 @@ export const LedgerTemplate = forwardRef<HTMLDivElement, Props>(function LedgerT
             </th>
             <th style={{ padding: cellPadding, textAlign: "end", fontWeight: 600 }}>
               {t.ledgers.balance}
+            </th>
+            <th style={{ padding: cellPadding, textAlign: "start", fontWeight: 600 }}>
+              {t.common.date}
             </th>
           </tr>
         </thead>
@@ -183,9 +183,6 @@ export const LedgerTemplate = forwardRef<HTMLDivElement, Props>(function LedgerT
             return (
               <tr key={row.id}>
                 <td style={{ ...cellStyle, fontWeight: 500 }}>{row.name}</td>
-                <td style={{ ...cellStyle, color: "#525252", whiteSpace: "nowrap" }}>
-                  {formatRowDate(row.date)}
-                </td>
                 <td style={{ ...cellStyle, ...numCellBase }}>
                   {formatAmount(row.invoice)}
                 </td>
@@ -205,6 +202,9 @@ export const LedgerTemplate = forwardRef<HTMLDivElement, Props>(function LedgerT
                 >
                   {formatAmount(cumulativeBalances[idx])}
                 </td>
+                <td style={{ ...cellStyle, color: "#525252", whiteSpace: "nowrap" }}>
+                  {formatRowDate(row.date)}
+                </td>
               </tr>
             )
           })}
@@ -212,7 +212,7 @@ export const LedgerTemplate = forwardRef<HTMLDivElement, Props>(function LedgerT
         <tfoot>
           <tr>
             <td
-              colSpan={5}
+              colSpan={4}
               style={{
                 padding: footerCellPadding,
                 fontWeight: 700,
@@ -234,6 +234,13 @@ export const LedgerTemplate = forwardRef<HTMLDivElement, Props>(function LedgerT
             >
               {formatMoney(grandTotal)}
             </td>
+            <td
+              style={{
+                padding: footerCellPadding,
+                background: "#f5f5f5",
+                borderTop: "1px solid #d4d4d4",
+              }}
+            />
           </tr>
         </tfoot>
       </table>

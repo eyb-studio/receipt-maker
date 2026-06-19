@@ -168,31 +168,25 @@ export function LedgerEditorPage() {
 
         <Card>
           <CardContent className="grid gap-3">
-            <div className="text-muted-foreground hidden grid-cols-[1fr_150px_110px_110px_110px_110px_40px] gap-2 text-xs font-medium uppercase sm:grid">
+            <div className="text-muted-foreground hidden grid-cols-[1fr_110px_110px_110px_110px_150px_40px] gap-2 text-xs font-medium uppercase sm:grid">
               <div>{t.ledgers.name}</div>
-              <div>{t.common.date}</div>
               <div>{t.ledgers.invoice}</div>
               <div>{t.ledgers.commission}</div>
               <div>{t.ledgers.cash}</div>
               <div>{t.ledgers.balance}</div>
+              <div>{t.common.date}</div>
               <div />
             </div>
 
             {rows.map((row, idx) => (
               <div
                 key={row.id}
-                className="grid gap-2 sm:grid-cols-[1fr_150px_110px_110px_110px_110px_40px] sm:items-center"
+                className="grid gap-2 sm:grid-cols-[1fr_110px_110px_110px_110px_150px_40px] sm:items-center"
               >
                 <Input
                   value={row.name}
                   placeholder={t.ledgers.namePlaceholder}
                   onChange={(e) => updateRow(row.id, { name: e.target.value })}
-                />
-                <Input
-                  type="date"
-                  value={row.date}
-                  aria-label={t.common.date}
-                  onChange={(e) => updateRow(row.id, { date: e.target.value })}
                 />
                 <Input
                   type="text"
@@ -231,6 +225,12 @@ export function LedgerEditorPage() {
                 >
                   {formatAmount(cumulativeBalances[idx])}
                 </div>
+                <Input
+                  type="date"
+                  value={row.date}
+                  aria-label={t.common.date}
+                  onChange={(e) => updateRow(row.id, { date: e.target.value })}
+                />
                 <Button
                   type="button"
                   variant="ghost"
