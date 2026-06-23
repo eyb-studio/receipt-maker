@@ -9,6 +9,10 @@ import { ReceiptViewPage } from "@/pages/ReceiptViewPage"
 import { LedgersListPage } from "@/pages/LedgersListPage"
 import { LedgerEditorPage } from "@/pages/LedgerEditorPage"
 import { LedgerViewPage } from "@/pages/LedgerViewPage"
+import { PriceListsListPage } from "@/pages/PriceListsListPage"
+import { PriceListEditorPage } from "@/pages/PriceListEditorPage"
+import { PriceListViewPage } from "@/pages/PriceListViewPage"
+import { PriceCatalogPage } from "@/pages/PriceCatalogPage"
 import { ClientsPage } from "@/pages/ClientsPage"
 import { ProductsPage } from "@/pages/ProductsPage"
 import { SettingsPage } from "@/pages/SettingsPage"
@@ -25,6 +29,11 @@ const router = createBrowserRouter([
       { path: "ledgers/new", element: <LedgerEditorPage /> },
       { path: "ledgers/:id", element: <LedgerViewPage /> },
       { path: "ledgers/:id/edit", element: <LedgerEditorPage /> },
+      { path: "pricelists", element: <PriceListsListPage /> },
+      { path: "pricelists/new", element: <PriceListEditorPage /> },
+      { path: "pricelists/catalog", element: <PriceCatalogPage /> },
+      { path: "pricelists/:id", element: <PriceListViewPage /> },
+      { path: "pricelists/:id/edit", element: <PriceListEditorPage /> },
       { path: "clients", element: <ClientsPage /> },
       { path: "products", element: <ProductsPage /> },
       { path: "settings", element: <SettingsPage /> },

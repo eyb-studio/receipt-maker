@@ -77,3 +77,28 @@ export type Ledger = {
   notes?: string
   createdAt: number
 }
+
+export type PriceListItem = {
+  id: string
+  name: string
+  price: number
+}
+
+export type PriceList = {
+  id: string
+  number: number
+  title: string // customer / list name
+  date: string
+  items: PriceListItem[]
+  notes?: string
+  createdAt: number
+}
+
+// Auto-learned catalog of item names + their last-used price, used to
+// power autocomplete in the price-list editor. Also editable by hand.
+export type CatalogItem = {
+  id: string
+  name: string
+  price: number
+  createdAt: number
+}

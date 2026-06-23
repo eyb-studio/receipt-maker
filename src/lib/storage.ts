@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react"
-import type { Client, Company, Ledger, Product, Receipt } from "@/types"
+import type { CatalogItem, Client, Company, Ledger, PriceList, Product, Receipt } from "@/types"
 
 const KEYS = {
   company: "receipt-maker:company",
@@ -9,6 +9,9 @@ const KEYS = {
   counter: "receipt-maker:receipt-counter",
   ledgers: "receipt-maker:ledgers",
   ledgerCounter: "receipt-maker:ledger-counter",
+  priceLists: "receipt-maker:price-lists",
+  priceListCounter: "receipt-maker:price-list-counter",
+  priceCatalog: "receipt-maker:price-catalog",
   schemaVersion: "receipt-maker:schema-version",
 } as const
 
@@ -201,4 +204,91 @@ export function useLedgers() {
   const getLedger = (id: string) => ledgers.find((l) => l.id === id)
 
   return { ledgers, addLedger, updateLedger, deleteLedger, getLedger }
+}
+
+// ── Price-list item catalog (autocomplete source) ───────────────────────────
+
+export function usePriceCatalog() {
+  const [catalog, setCatalog] = useStored<CatalogItem[]>(KEYS.priceCatalog, [])
+
+  const addCatalogItem = (data: Omit<CatalogItem, "id" | "createdAt">) => {
+    const item: CatalogItem = { ...data, id: crypto.randomUUID(), createdAt: Date.now() }
+    setCatalog((prev) => [item, ...prev])
+    return item
+  }
+
+  const updateCatalogItem = (
+    id: string,
+    data: Partial<Omit<CatalogItem, "id" | "createdAt">>
+  ) => {
+    setCatalog((prev) => prev.map((c) => (c.id === id ? { ...c, ...data } : c)))
+  }
+
+  const deleteCatalogItem = (id: string) => {
+    setCatalog((prev) => prev.filter((c) => c.id !== id))
+  }
+
+  // Upsert items by case-insensitive name, keeping the latest price. Called
+  // automatically when a price list is saved so the catalog learns over time.
+  const learnItems = (items: { name: string; price: number }[]) => {
+    setCatalog((prev) => {
+      const byName = new Map(prev.map((c) => [c.name.trim().toLowerCase(), c]))
+      for (const it of items) {
+        const name = it.name.trim()
+        if (!name) continue
+        const key = name.toLowerCase()
+        const existing = byName.get(key)
+        if (existing) {
+          byName.set(key, { ...existing, name, price: it.price })
+        } else {
+          byName.set(key, {
+            id: crypto.randomUUID(),
+            name,
+            price: it.price,
+            createdAt: Date.now(),
+          })
+        }
+      }
+      return Array.from(byName.values()).sort((a, b) => b.createdAt - a.createdAt)
+    })
+  }
+
+  return { catalog, addCatalogItem, updateCatalogItem, deleteCatalogItem, learnItems }
+}
+
+function nextPriceListNumber(): number {
+  const current = readJSON<number>(KEYS.priceListCounter, 1000)
+  const next = current + 1
+  writeJSON(KEYS.priceListCounter, next)
+  return next
+}
+
+export function usePriceLists() {
+  const [priceLists, setPriceLists] = useStored<PriceList[]>(KEYS.priceLists, [])
+
+  const addPriceList = (data: Omit<PriceList, "id" | "createdAt" | "number">) => {
+    const priceList: PriceList = {
+      ...data,
+      id: crypto.randomUUID(),
+      number: nextPriceListNumber(),
+      createdAt: Date.now(),
+    }
+    setPriceLists((prev) => [priceList, ...prev])
+    return priceList
+  }
+
+  const updatePriceList = (
+    id: string,
+    data: Partial<Omit<PriceList, "id" | "createdAt" | "number">>
+  ) => {
+    setPriceLists((prev) => prev.map((p) => (p.id === id ? { ...p, ...data } : p)))
+  }
+
+  const deletePriceList = (id: string) => {
+    setPriceLists((prev) => prev.filter((p) => p.id !== id))
+  }
+
+  const getPriceList = (id: string) => priceLists.find((p) => p.id === id)
+
+  return { priceLists, addPriceList, updatePriceList, deletePriceList, getPriceList }
 }
