@@ -12,7 +12,7 @@ import { usePriceCatalog, usePriceLists } from "@/lib/storage"
 import { useT } from "@/i18n/LanguageProvider"
 import { PageHeader } from "@/components/PageHeader"
 import { toLatinDigits } from "@/lib/digits"
-import { formatMoney } from "@/lib/formatters"
+import { formatAmount, formatMoney, priceListTotals } from "@/lib/formatters"
 import type { CatalogItem, PriceListItem } from "@/types"
 
 type DraftItem = {
@@ -46,6 +46,15 @@ export function PriceListEditorPage() {
   const [title, setTitle] = useState<string>(existing?.title ?? "")
   const [date, setDate] = useState<string>(existing?.date ?? todayISO())
   const [notes, setNotes] = useState<string>(existing?.notes ?? "")
+  const [commission, setCommission] = useState<string>(
+    existing?.commission ? String(existing.commission) : ""
+  )
+  const [commissionIsPercent, setCommissionIsPercent] = useState<boolean>(
+    existing?.commissionIsPercent ?? false
+  )
+  const [expenses, setExpenses] = useState<string>(
+    existing?.expenses ? String(existing.expenses) : ""
+  )
   const [items, setItems] = useState<DraftItem[]>(() =>
     existing && existing.items.length
       ? existing.items.map((it) => ({
@@ -67,9 +76,15 @@ export function PriceListEditorPage() {
     }
   }, [items])
 
-  const total = useMemo(
-    () => items.reduce((sum, it) => sum + (Number(it.price) || 0), 0),
-    [items]
+  const totals = useMemo(
+    () =>
+      priceListTotals({
+        items: items.map((it) => ({ price: Number(it.price) || 0 })),
+        commission: Number(commission) || 0,
+        commissionIsPercent,
+        expenses: Number(expenses) || 0,
+      }),
+    [items, commission, commissionIsPercent, expenses]
   )
   const filledCount = items.filter((it) => it.name.trim()).length
 
@@ -142,10 +157,15 @@ export function PriceListEditorPage() {
       return
     }
     learnItems(validItems.filter((it) => it.name))
+    const commissionVal = Number(commission) || 0
+    const expensesVal = Number(expenses) || 0
     const payload = {
       title: title.trim(),
       date,
       items: validItems,
+      commission: commissionVal || undefined,
+      commissionIsPercent: commissionVal ? commissionIsPercent : undefined,
+      expenses: expensesVal || undefined,
       notes: notes.trim() || undefined,
     }
     if (existing) {
@@ -233,9 +253,88 @@ export function PriceListEditorPage() {
         </Card>
 
         <Card>
-          <CardContent className="grid gap-4 sm:grid-cols-2">
-            <Stat label={t.pricelists.itemCount} value={String(filledCount)} />
-            <Stat label={t.pricelists.grandTotal} value={formatMoney(total)} />
+          <CardContent className="grid gap-4">
+            <div className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-end">
+              <div className="grid gap-2">
+                <Label htmlFor="commission">{t.pricelists.commission}</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="commission"
+                    type="text"
+                    inputMode="decimal"
+                    dir="ltr"
+                    placeholder="0"
+                    value={commission}
+                    onChange={(e) => setCommission(toLatinDigits(e.target.value))}
+                  />
+                  <div className="bg-muted inline-flex shrink-0 rounded-md p-0.5">
+                    <button
+                      type="button"
+                      onClick={() => setCommissionIsPercent(false)}
+                      className={
+                        "rounded px-3 py-1 text-sm " +
+                        (!commissionIsPercent ? "bg-background shadow-sm" : "text-muted-foreground")
+                      }
+                    >
+                      {t.pricelists.flatAmount}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCommissionIsPercent(true)}
+                      className={
+                        "rounded px-3 py-1 text-sm " +
+                        (commissionIsPercent ? "bg-background shadow-sm" : "text-muted-foreground")
+                      }
+                    >
+                      {t.pricelists.percent}
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="expenses">{t.pricelists.expenses}</Label>
+                <Input
+                  id="expenses"
+                  type="text"
+                  inputMode="decimal"
+                  dir="ltr"
+                  placeholder="0"
+                  value={expenses}
+                  onChange={(e) => setExpenses(toLatinDigits(e.target.value))}
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-2 border-t pt-4 text-sm">
+              <TotalRow label={t.pricelists.subtotal} value={formatMoney(totals.subtotal)} />
+              {totals.commission ? (
+                <TotalRow
+                  label={
+                    commissionIsPercent
+                      ? `${t.pricelists.commission} (${commission}${t.pricelists.percent})`
+                      : t.pricelists.commission
+                  }
+                  value={`− ${formatAmount(totals.commission)}`}
+                />
+              ) : null}
+              {totals.expenses ? (
+                <TotalRow
+                  label={t.pricelists.expenses}
+                  value={`− ${formatAmount(totals.expenses)}`}
+                />
+              ) : null}
+              <div className="mt-1 flex items-center justify-between border-t pt-3">
+                <span className="text-muted-foreground text-xs uppercase">
+                  {t.pricelists.grandTotal}
+                </span>
+                <span className="text-2xl font-semibold tabular-nums">
+                  {formatMoney(totals.grandTotal)}
+                </span>
+              </div>
+              <div className="text-muted-foreground text-xs">
+                {`${filledCount} ${t.pricelists.itemCount}`}
+              </div>
+            </div>
           </CardContent>
         </Card>
 
@@ -435,11 +534,13 @@ function ItemRow({
   )
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function TotalRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="bg-muted/40 rounded-md p-3">
-      <div className="text-muted-foreground text-xs uppercase">{label}</div>
-      <div className="text-2xl font-semibold tabular-nums">{value}</div>
+    <div className="flex items-center justify-between">
+      <span className="text-muted-foreground">{label}</span>
+      <span dir="ltr" className="tabular-nums">
+        {value}
+      </span>
     </div>
   )
 }

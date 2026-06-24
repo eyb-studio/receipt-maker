@@ -1,7 +1,8 @@
 import { forwardRef } from "react"
 import { ScrollText } from "lucide-react"
 import { useLanguage, useT } from "@/i18n/LanguageProvider"
-import { formatAmount, formatMoney, pickColumnCount, splitIntoColumns } from "@/lib/formatters"
+import { formatAmount, formatMoney, layoutColumns, priceListTotals } from "@/lib/formatters"
+import { DEFAULT_PRICE_LIST_CONFIG } from "@/types"
 import type { Company, PriceList as PriceListType } from "@/types"
 
 type Props = {
@@ -18,10 +19,15 @@ export const PriceListTemplate = forwardRef<HTMLDivElement, Props>(function Pric
   const t = useT()
   const { dir, language } = useLanguage()
 
-  const total = priceList.items.reduce((sum, it) => sum + it.price, 0)
+  const totals = priceListTotals(priceList)
 
-  const columnCount = pickColumnCount(priceList.items.length)
-  const columns = splitIntoColumns(priceList.items, columnCount)
+  const config = { ...DEFAULT_PRICE_LIST_CONFIG, ...(company.priceListConfig ?? {}) }
+  const columns = layoutColumns(
+    priceList.items,
+    config.itemsPerColumn,
+    config.maxColumns
+  )
+  const columnCount = columns.length
 
   const formattedDate = (() => {
     try {
@@ -179,21 +185,46 @@ export const PriceListTemplate = forwardRef<HTMLDivElement, Props>(function Pric
       <div
         style={{
           marginTop: "24px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "16px",
-          background: "#f5f5f5",
-          borderTop: `2px solid ${company.primaryColor}`,
-          padding: "14px 20px",
-          borderRadius: "0 0 6px 6px",
+          marginLeft: dir === "rtl" ? 0 : "auto",
+          marginRight: dir === "rtl" ? "auto" : 0,
+          width: "320px",
+          maxWidth: "100%",
         }}
       >
-        <div style={{ fontSize: "13px", color: "#525252" }}>
-          {`${priceList.items.length} ${t.pricelists.itemCount}`}
-        </div>
-        <div style={{ display: "flex", alignItems: "baseline", gap: "12px" }}>
-          <span style={labelStyle}>{t.pricelists.grandTotal}</span>
+        <TotalLine
+          label={`${t.pricelists.subtotal} (${priceList.items.length} ${t.pricelists.itemCount})`}
+          value={formatAmount(totals.subtotal)}
+        />
+        {totals.commission ? (
+          <TotalLine
+            label={
+              priceList.commissionIsPercent
+                ? `${t.pricelists.commission} (${priceList.commission}${t.pricelists.percent})`
+                : t.pricelists.commission
+            }
+            value={`− ${formatAmount(totals.commission)}`}
+          />
+        ) : null}
+        {totals.expenses ? (
+          <TotalLine
+            label={t.pricelists.expenses}
+            value={`− ${formatAmount(totals.expenses)}`}
+          />
+        ) : null}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "baseline",
+            justifyContent: "space-between",
+            gap: "16px",
+            marginTop: "6px",
+            background: "#f5f5f5",
+            borderTop: `2px solid ${company.primaryColor}`,
+            padding: "12px 16px",
+            borderRadius: "6px",
+          }}
+        >
+          <span style={{ fontSize: "13px", fontWeight: 700 }}>{t.pricelists.grandTotal}</span>
           <span
             style={{
               fontSize: "22px",
@@ -202,7 +233,7 @@ export const PriceListTemplate = forwardRef<HTMLDivElement, Props>(function Pric
               fontVariantNumeric: "tabular-nums",
             }}
           >
-            {formatMoney(total)}
+            {formatMoney(totals.grandTotal)}
           </span>
         </div>
       </div>
@@ -225,3 +256,22 @@ export const PriceListTemplate = forwardRef<HTMLDivElement, Props>(function Pric
     </div>
   )
 })
+
+function TotalLine({ label, value }: { label: string; value: string }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "baseline",
+        justifyContent: "space-between",
+        gap: "16px",
+        padding: "6px 16px",
+        fontSize: "14px",
+        color: "#525252",
+      }}
+    >
+      <span>{label}</span>
+      <span style={{ fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>{value}</span>
+    </div>
+  )
+}

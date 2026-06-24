@@ -12,12 +12,23 @@ export const DEFAULT_RECEIPT_COLUMNS: ReceiptColumns = {
   totalWeight: true,
 }
 
+export type PriceListConfig = {
+  itemsPerColumn: number
+  maxColumns: number
+}
+
+export const DEFAULT_PRICE_LIST_CONFIG: PriceListConfig = {
+  itemsPerColumn: 30,
+  maxColumns: 3,
+}
+
 export type Company = {
   name: string
   logo?: string
   primaryColor: string
   accentColor: string
   receiptColumns?: ReceiptColumns
+  priceListConfig?: PriceListConfig
 }
 
 export type Client = {
@@ -90,6 +101,12 @@ export type PriceList = {
   title: string // customer / list name
   date: string
   items: PriceListItem[]
+  // حق (commission) deducted from the items subtotal. Either a flat amount or
+  // a percentage of the subtotal, depending on commissionIsPercent.
+  commission?: number
+  commissionIsPercent?: boolean
+  // هزینه‌ها (expenses) — flat amount also deducted from the subtotal.
+  expenses?: number
   notes?: string
   createdAt: number
 }

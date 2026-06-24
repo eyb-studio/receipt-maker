@@ -35,21 +35,42 @@ export function rowBalance(row: {
   return row.invoice + row.commission - row.cash
 }
 
-// Pick a sensible column count for an itemized list, then split the items
-// column-major (fill the first column top-to-bottom, then the next) so the
-// printed sheet reads the way a hand-written ledger does.
-export function pickColumnCount(itemCount: number): number {
-  if (itemCount <= 12) return 1
-  if (itemCount <= 28) return 2
-  return 3
-}
-
-export function splitIntoColumns<T>(items: T[], columns: number): T[][] {
-  if (columns <= 1 || items.length === 0) return [items]
-  const perColumn = Math.ceil(items.length / columns)
+// Flow items into columns column-major (fill the first column top-to-bottom,
+// then the next) so the printed sheet reads like a hand-written ledger. A new
+// column is added each time an existing one fills past `itemsPerColumn`, capped
+// at `maxColumns`. Beyond that cap the columns simply grow taller.
+export function layoutColumns<T>(
+  items: T[],
+  itemsPerColumn: number,
+  maxColumns: number
+): T[][] {
+  const count = items.length
+  if (count === 0) return [[]]
+  const perCol = Math.max(1, Math.floor(itemsPerColumn) || 1)
+  const cap = Math.max(1, Math.floor(maxColumns) || 1)
+  const columns = Math.min(Math.ceil(count / perCol), cap)
+  const balanced = Math.ceil(count / columns)
   const result: T[][] = []
-  for (let i = 0; i < items.length; i += perColumn) {
-    result.push(items.slice(i, i + perColumn))
+  for (let i = 0; i < count; i += balanced) {
+    result.push(items.slice(i, i + balanced))
   }
   return result
+}
+
+// Shared money math for a fish receipt: subtotal of items, then حق (commission,
+// flat or % of subtotal) and هزینه‌ها (expenses, flat) are both deducted.
+export function priceListTotals(pl: {
+  items: { price: number }[]
+  commission?: number
+  commissionIsPercent?: boolean
+  expenses?: number
+}): { subtotal: number; commission: number; expenses: number; grandTotal: number } {
+  const subtotal = pl.items.reduce((sum, it) => sum + (it.price || 0), 0)
+  const rawCommission = pl.commission ?? 0
+  const commission = pl.commissionIsPercent
+    ? (subtotal * rawCommission) / 100
+    : rawCommission
+  const expenses = pl.expenses ?? 0
+  const grandTotal = subtotal - commission - expenses
+  return { subtotal, commission, expenses, grandTotal }
 }

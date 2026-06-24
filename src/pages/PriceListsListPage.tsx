@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { usePriceLists } from "@/lib/storage"
 import { useT } from "@/i18n/LanguageProvider"
-import { formatMoney } from "@/lib/formatters"
+import { formatMoney, priceListTotals } from "@/lib/formatters"
 import { PageHeader } from "@/components/PageHeader"
 import { EmptyState } from "@/components/EmptyState"
 
@@ -51,7 +51,7 @@ export function PriceListsListPage() {
       ) : (
         <div className="grid gap-3">
           {priceLists.map((p) => {
-            const total = p.items.reduce((s, it) => s + it.price, 0)
+            const total = priceListTotals(p).grandTotal
             const dateStr = (() => {
               try {
                 return new Date(p.date).toLocaleDateString("en-US", {

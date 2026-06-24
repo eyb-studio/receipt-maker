@@ -22,7 +22,12 @@ import {
   useUnsavedChangesGuard,
   UnsavedChangesPrompt,
 } from "@/hooks/useUnsavedChangesGuard"
-import { DEFAULT_RECEIPT_COLUMNS, type ReceiptColumns } from "@/types"
+import { toLatinDigits } from "@/lib/digits"
+import {
+  DEFAULT_PRICE_LIST_CONFIG,
+  DEFAULT_RECEIPT_COLUMNS,
+  type ReceiptColumns,
+} from "@/types"
 
 function readFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -187,6 +192,52 @@ export function SettingsPage() {
                 </div>
               )
             })}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>{t.settings.fishLayout}</CardTitle>
+            <CardDescription>{t.settings.fishLayoutDesc}</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4 sm:grid-cols-2">
+            {(() => {
+              const cfg = { ...DEFAULT_PRICE_LIST_CONFIG, ...(company.priceListConfig ?? {}) }
+              const setCfg = (patch: Partial<typeof cfg>) =>
+                setCompany({ ...company, priceListConfig: { ...cfg, ...patch } })
+              return (
+                <>
+                  <div className="grid gap-2">
+                    <Label htmlFor="items-per-column">{t.settings.itemsPerColumn}</Label>
+                    <Input
+                      id="items-per-column"
+                      type="text"
+                      inputMode="numeric"
+                      dir="ltr"
+                      value={String(cfg.itemsPerColumn)}
+                      onChange={(e) => {
+                        const n = Number(toLatinDigits(e.target.value))
+                        setCfg({ itemsPerColumn: Number.isFinite(n) && n > 0 ? Math.floor(n) : 1 })
+                      }}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="max-columns">{t.settings.maxColumns}</Label>
+                    <Input
+                      id="max-columns"
+                      type="text"
+                      inputMode="numeric"
+                      dir="ltr"
+                      value={String(cfg.maxColumns)}
+                      onChange={(e) => {
+                        const n = Number(toLatinDigits(e.target.value))
+                        setCfg({ maxColumns: Number.isFinite(n) && n > 0 ? Math.floor(n) : 1 })
+                      }}
+                    />
+                  </div>
+                </>
+              )
+            })()}
           </CardContent>
         </Card>
 

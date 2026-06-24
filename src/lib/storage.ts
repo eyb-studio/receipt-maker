@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react"
+import { DEFAULT_PRICE_LIST_CONFIG } from "@/types"
 import type { CatalogItem, Client, Company, Ledger, PriceList, Product, Receipt } from "@/types"
 
 const KEYS = {
@@ -91,6 +92,7 @@ const DEFAULT_COMPANY: Company = {
   logo: undefined,
   primaryColor: "#1f2937",
   accentColor: "#7c3aed",
+  priceListConfig: DEFAULT_PRICE_LIST_CONFIG,
 }
 
 export function useCompany() {
