@@ -21,6 +21,16 @@ type DraftItem = {
   price: string
 }
 
+type DraftExpense = {
+  id: string
+  label: string
+  amount: string
+}
+
+function newDraftExpense(): DraftExpense {
+  return { id: crypto.randomUUID(), label: "", amount: "" }
+}
+
 function todayISO(): string {
   const d = new Date()
   const yyyy = d.getFullYear()
@@ -52,9 +62,22 @@ export function PriceListEditorPage() {
   const [commissionIsPercent, setCommissionIsPercent] = useState<boolean>(
     existing?.commissionIsPercent ?? false
   )
-  const [expenses, setExpenses] = useState<string>(
-    existing?.expenses ? String(existing.expenses) : ""
+  const [basketCount, setBasketCount] = useState<string>(
+    existing?.basketCount ? String(existing.basketCount) : ""
   )
+  const [expenseRows, setExpenseRows] = useState<DraftExpense[]>(() => {
+    if (existing?.expenseItems?.length) {
+      return existing.expenseItems.map((e) => ({
+        id: e.id,
+        label: e.label,
+        amount: String(e.amount),
+      }))
+    }
+    if (existing?.expenses) {
+      return [{ id: crypto.randomUUID(), label: "", amount: String(existing.expenses) }]
+    }
+    return []
+  })
   const [items, setItems] = useState<DraftItem[]>(() =>
     existing && existing.items.length
       ? existing.items.map((it) => ({
@@ -82,11 +105,10 @@ export function PriceListEditorPage() {
         items: items.map((it) => ({ price: Number(it.price) || 0 })),
         commission: Number(commission) || 0,
         commissionIsPercent,
-        expenses: Number(expenses) || 0,
+        expenseItems: expenseRows.map((e) => ({ amount: Number(e.amount) || 0 })),
       }),
-    [items, commission, commissionIsPercent, expenses]
+    [items, commission, commissionIsPercent, expenseRows]
   )
-  const filledCount = items.filter((it) => it.name.trim()).length
 
   const catalogByName = useMemo(() => {
     const map = new Map<string, CatalogItem>()
@@ -143,6 +165,14 @@ export function PriceListEditorPage() {
     }
   }
 
+  const updateExpense = (rowId: string, patch: Partial<DraftExpense>) => {
+    setExpenseRows((prev) => prev.map((r) => (r.id === rowId ? { ...r, ...patch } : r)))
+  }
+  const removeExpense = (rowId: string) => {
+    setExpenseRows((prev) => prev.filter((r) => r.id !== rowId))
+  }
+  const addExpense = () => setExpenseRows((prev) => [...prev, newDraftExpense()])
+
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const validItems: PriceListItem[] = []
@@ -158,14 +188,23 @@ export function PriceListEditorPage() {
     }
     learnItems(validItems.filter((it) => it.name))
     const commissionVal = Number(commission) || 0
-    const expensesVal = Number(expenses) || 0
+    const expenseItems = expenseRows
+      .map((r) => ({
+        id: r.id,
+        label: r.label.trim(),
+        amount: Number(r.amount) || 0,
+      }))
+      .filter((r) => r.label || r.amount)
+    const basketVal = Number(basketCount) || 0
     const payload = {
       title: title.trim(),
       date,
+      basketCount: basketVal || undefined,
       items: validItems,
       commission: commissionVal || undefined,
       commissionIsPercent: commissionVal ? commissionIsPercent : undefined,
-      expenses: expensesVal || undefined,
+      expenseItems: expenseItems.length ? expenseItems : undefined,
+      expenses: undefined,
       notes: notes.trim() || undefined,
     }
     if (existing) {
@@ -196,7 +235,7 @@ export function PriceListEditorPage() {
       <form onSubmit={handleSubmit} className="grid gap-6">
         <Card>
           <CardContent className="grid gap-4 sm:grid-cols-2">
-            <div className="grid gap-2">
+            <div className="grid gap-2 sm:col-span-2">
               <Label htmlFor="title">{t.pricelists.titleLabel}</Label>
               <Input
                 id="title"
@@ -212,6 +251,18 @@ export function PriceListEditorPage() {
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="basketCount">{t.pricelists.baskets}</Label>
+              <Input
+                id="basketCount"
+                type="text"
+                inputMode="numeric"
+                dir="ltr"
+                placeholder="0"
+                value={basketCount}
+                onChange={(e) => setBasketCount(toLatinDigits(e.target.value))}
               />
             </div>
           </CardContent>
@@ -254,59 +305,89 @@ export function PriceListEditorPage() {
 
         <Card>
           <CardContent className="grid gap-4">
-            <div className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-end">
-              <div className="grid gap-2">
-                <Label htmlFor="commission">{t.pricelists.commission}</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    id="commission"
-                    type="text"
-                    inputMode="decimal"
-                    dir="ltr"
-                    placeholder="0"
-                    value={commission}
-                    onChange={(e) => setCommission(toLatinDigits(e.target.value))}
-                  />
-                  <div className="bg-muted inline-flex shrink-0 rounded-md p-0.5">
-                    <button
-                      type="button"
-                      onClick={() => setCommissionIsPercent(false)}
-                      className={
-                        "rounded px-3 py-1 text-sm " +
-                        (!commissionIsPercent ? "bg-background shadow-sm" : "text-muted-foreground")
-                      }
-                    >
-                      {t.pricelists.flatAmount}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setCommissionIsPercent(true)}
-                      className={
-                        "rounded px-3 py-1 text-sm " +
-                        (commissionIsPercent ? "bg-background shadow-sm" : "text-muted-foreground")
-                      }
-                    >
-                      {t.pricelists.percent}
-                    </button>
-                  </div>
-                </div>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="expenses">{t.pricelists.expenses}</Label>
+            <div className="grid gap-2 sm:max-w-sm">
+              <Label htmlFor="commission">{t.pricelists.commission}</Label>
+              <div className="flex items-center gap-2">
                 <Input
-                  id="expenses"
+                  id="commission"
                   type="text"
                   inputMode="decimal"
                   dir="ltr"
                   placeholder="0"
-                  value={expenses}
-                  onChange={(e) => setExpenses(toLatinDigits(e.target.value))}
+                  value={commission}
+                  onChange={(e) => setCommission(toLatinDigits(e.target.value))}
                 />
+                <div className="bg-muted inline-flex shrink-0 rounded-md p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setCommissionIsPercent(false)}
+                    className={
+                      "rounded px-3 py-1 text-sm " +
+                      (!commissionIsPercent ? "bg-background shadow-sm" : "text-muted-foreground")
+                    }
+                  >
+                    {t.pricelists.flatAmount}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCommissionIsPercent(true)}
+                    className={
+                      "rounded px-3 py-1 text-sm " +
+                      (commissionIsPercent ? "bg-background shadow-sm" : "text-muted-foreground")
+                    }
+                  >
+                    {t.pricelists.percent}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid gap-2">
+              <Label>{t.pricelists.expenses}</Label>
+              {expenseRows.map((row) => (
+                <div
+                  key={row.id}
+                  className="grid grid-cols-[1fr_120px_40px] items-center gap-2"
+                >
+                  <Input
+                    value={row.label}
+                    placeholder={t.pricelists.expenseNamePlaceholder}
+                    onChange={(e) => updateExpense(row.id, { label: e.target.value })}
+                  />
+                  <Input
+                    type="text"
+                    inputMode="decimal"
+                    dir="ltr"
+                    placeholder="0"
+                    value={row.amount}
+                    onChange={(e) =>
+                      updateExpense(row.id, { amount: toLatinDigits(e.target.value) })
+                    }
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removeExpense(row.id)}
+                    aria-label={t.actions.remove}
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                </div>
+              ))}
+              <div>
+                <Button type="button" variant="outline" size="sm" onClick={addExpense}>
+                  <Plus className="size-4" />
+                  {t.pricelists.addExpense}
+                </Button>
               </div>
             </div>
 
             <div className="grid gap-2 border-t pt-4 text-sm">
-              <TotalRow label={t.pricelists.subtotal} value={formatMoney(totals.subtotal)} />
+              <TotalRow
+                label={t.pricelists.subtotal}
+                value={formatAmount(totals.subtotal)}
+              />
               {totals.commission ? (
                 <TotalRow
                   label={
@@ -318,10 +399,25 @@ export function PriceListEditorPage() {
                 />
               ) : null}
               {totals.expenses ? (
-                <TotalRow
-                  label={t.pricelists.expenses}
-                  value={`− ${formatAmount(totals.expenses)}`}
-                />
+                <>
+                  <TotalRow
+                    label={t.pricelists.expenses}
+                    value={`− ${formatAmount(totals.expenses)}`}
+                  />
+                  {expenseRows
+                    .filter((r) => r.label.trim() || Number(r.amount))
+                    .map((r) => (
+                      <div
+                        key={r.id}
+                        className="text-muted-foreground flex items-center justify-between ps-4 text-xs"
+                      >
+                        <span>{r.label.trim() || t.pricelists.expenses}</span>
+                        <span dir="ltr" className="tabular-nums">
+                          {formatAmount(Number(r.amount) || 0)}
+                        </span>
+                      </div>
+                    ))}
+                </>
               ) : null}
               <div className="mt-1 flex items-center justify-between border-t pt-3">
                 <span className="text-muted-foreground text-xs uppercase">
@@ -330,9 +426,6 @@ export function PriceListEditorPage() {
                 <span className="text-2xl font-semibold tabular-nums">
                   {formatMoney(totals.grandTotal)}
                 </span>
-              </div>
-              <div className="text-muted-foreground text-xs">
-                {`${filledCount} ${t.pricelists.itemCount}`}
               </div>
             </div>
           </CardContent>

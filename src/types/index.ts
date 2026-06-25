@@ -95,17 +95,27 @@ export type PriceListItem = {
   price: number
 }
 
+// A single هزینه (cost) line within the expenses breakdown, e.g. برف / حمالی.
+export type ExpenseItem = {
+  id: string
+  label: string
+  amount: number
+}
+
 export type PriceList = {
   id: string
   number: number
   title: string // customer / list name
   date: string
+  basketCount?: number // تعداد باسکت
   items: PriceListItem[]
   // حق (commission) deducted from the items subtotal. Either a flat amount or
   // a percentage of the subtotal, depending on commissionIsPercent.
   commission?: number
   commissionIsPercent?: boolean
-  // هزینه‌ها (expenses) — flat amount also deducted from the subtotal.
+  // هزینه‌ها (expenses) — itemized cost lines, all deducted from the subtotal.
+  expenseItems?: ExpenseItem[]
+  // Legacy single-amount expenses, kept for backward compatibility.
   expenses?: number
   notes?: string
   createdAt: number

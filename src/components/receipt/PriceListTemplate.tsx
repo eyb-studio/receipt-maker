@@ -29,6 +29,10 @@ export const PriceListTemplate = forwardRef<HTMLDivElement, Props>(function Pric
   )
   const columnCount = columns.length
 
+  // Individual cost lines shown under the هزینه‌ها total. Legacy single-amount
+  // receipts have no breakdown — just the total line.
+  const expenseItems = priceList.expenseItems ?? []
+
   const formattedDate = (() => {
     try {
       return new Date(priceList.date).toLocaleDateString("en-US", {
@@ -101,8 +105,22 @@ export const PriceListTemplate = forwardRef<HTMLDivElement, Props>(function Pric
               <ScrollText style={{ width: "28px", height: "28px" }} />
             </div>
           )}
-          <div style={{ fontSize: "20px", fontWeight: 700, lineHeight: 1.2 }}>
-            {company.name || t.appName}
+          <div>
+            <div style={{ fontSize: "20px", fontWeight: 700, lineHeight: 1.2 }}>
+              {company.name || t.appName}
+            </div>
+            {priceList.basketCount ? (
+              <div
+                style={{
+                  marginTop: "6px",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  color: company.accentColor,
+                }}
+              >
+                {`${t.pricelists.baskets} : ${priceList.basketCount}`}
+              </div>
+            ) : null}
           </div>
         </div>
         <div style={{ textAlign: dir === "rtl" ? "left" : "right" }}>
@@ -192,7 +210,7 @@ export const PriceListTemplate = forwardRef<HTMLDivElement, Props>(function Pric
         }}
       >
         <TotalLine
-          label={`${t.pricelists.subtotal} (${priceList.items.length} ${t.pricelists.itemCount})`}
+          label={t.pricelists.subtotal}
           value={formatAmount(totals.subtotal)}
         />
         {totals.commission ? (
@@ -206,10 +224,32 @@ export const PriceListTemplate = forwardRef<HTMLDivElement, Props>(function Pric
           />
         ) : null}
         {totals.expenses ? (
-          <TotalLine
-            label={t.pricelists.expenses}
-            value={`− ${formatAmount(totals.expenses)}`}
-          />
+          <>
+            <TotalLine
+              label={t.pricelists.expenses}
+              value={`− ${formatAmount(totals.expenses)}`}
+            />
+            {expenseItems.map((e) => (
+              <div
+                key={e.id}
+                style={{
+                  display: "flex",
+                  alignItems: "baseline",
+                  justifyContent: "space-between",
+                  gap: "16px",
+                  padding: "2px 16px",
+                  paddingInlineStart: "28px",
+                  fontSize: "12px",
+                  color: "#888888",
+                }}
+              >
+                <span>{e.label || t.pricelists.expenses}</span>
+                <span style={{ fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>
+                  {formatAmount(e.amount)}
+                </span>
+              </div>
+            ))}
+          </>
         ) : null}
         <div
           style={{

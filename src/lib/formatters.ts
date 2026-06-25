@@ -63,6 +63,7 @@ export function priceListTotals(pl: {
   items: { price: number }[]
   commission?: number
   commissionIsPercent?: boolean
+  expenseItems?: { amount: number }[]
   expenses?: number
 }): { subtotal: number; commission: number; expenses: number; grandTotal: number } {
   const subtotal = pl.items.reduce((sum, it) => sum + (it.price || 0), 0)
@@ -70,7 +71,10 @@ export function priceListTotals(pl: {
   const commission = pl.commissionIsPercent
     ? (subtotal * rawCommission) / 100
     : rawCommission
-  const expenses = pl.expenses ?? 0
+  const expenses =
+    pl.expenseItems && pl.expenseItems.length
+      ? pl.expenseItems.reduce((sum, e) => sum + (e.amount || 0), 0)
+      : (pl.expenses ?? 0)
   const grandTotal = subtotal - commission - expenses
   return { subtotal, commission, expenses, grandTotal }
 }
