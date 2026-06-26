@@ -33,16 +33,11 @@ export const PriceListTemplate = forwardRef<HTMLDivElement, Props>(function Pric
   // receipts have no breakdown — just the total line.
   const expenseItems = priceList.expenseItems ?? []
 
+  // Numeric Gregorian DD/MM/YYYY (e.g. 26/07/2026). Parse the ISO parts
+  // directly so there's no timezone day-shift or localized month name.
   const formattedDate = (() => {
-    try {
-      return new Date(priceList.date).toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      })
-    } catch {
-      return priceList.date
-    }
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(priceList.date)
+    return m ? `${m[3]}/${m[2]}/${m[1]}` : priceList.date
   })()
 
   const labelStyle: React.CSSProperties = {
