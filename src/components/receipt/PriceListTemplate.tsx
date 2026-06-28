@@ -198,32 +198,22 @@ export const PriceListTemplate = forwardRef<HTMLDivElement, Props>(function Pric
       <div
         style={{
           marginTop: "24px",
-          marginLeft: dir === "rtl" ? 0 : "auto",
-          marginRight: dir === "rtl" ? "auto" : 0,
-          width: "320px",
-          maxWidth: "100%",
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          gap: "24px",
         }}
       >
-        <TotalLine
-          label={t.pricelists.subtotal}
-          value={formatAmount(totals.subtotal)}
-        />
-        {totals.commission ? (
-          <TotalLine
-            label={
-              priceList.commissionIsPercent
-                ? `${t.pricelists.commission} (${priceList.commission}${t.pricelists.percent})`
-                : t.pricelists.commission
-            }
-            value={`− ${formatAmount(totals.commission)}`}
-          />
-        ) : null}
-        {totals.expenses ? (
-          <>
-            <TotalLine
-              label={t.pricelists.expenses}
-              value={`− ${formatAmount(totals.expenses)}`}
-            />
+        {expenseItems.length ? (
+          <div
+            style={{
+              border: "1px solid #e5e5e5",
+              borderRadius: "8px",
+              padding: "10px 0",
+              minWidth: "200px",
+              fontSize: "13px",
+            }}
+          >
             {expenseItems.map((e) => (
               <div
                 key={e.id}
@@ -232,10 +222,8 @@ export const PriceListTemplate = forwardRef<HTMLDivElement, Props>(function Pric
                   alignItems: "baseline",
                   justifyContent: "space-between",
                   gap: "16px",
-                  padding: "2px 16px",
-                  paddingInlineStart: "28px",
-                  fontSize: "12px",
-                  color: "#888888",
+                  padding: "5px 16px",
+                  color: "#525252",
                 }}
               >
                 <span>{e.label || t.pricelists.expenses}</span>
@@ -244,32 +232,71 @@ export const PriceListTemplate = forwardRef<HTMLDivElement, Props>(function Pric
                 </span>
               </div>
             ))}
-          </>
-        ) : null}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "baseline",
-            justifyContent: "space-between",
-            gap: "16px",
-            marginTop: "6px",
-            background: "#f5f5f5",
-            borderTop: `2px solid ${company.primaryColor}`,
-            padding: "12px 16px",
-            borderRadius: "6px",
-          }}
-        >
-          <span style={{ fontSize: "13px", fontWeight: 700 }}>{t.pricelists.grandTotal}</span>
-          <span
+            <div
+              style={{
+                display: "flex",
+                alignItems: "baseline",
+                justifyContent: "space-between",
+                gap: "16px",
+                marginTop: "4px",
+                padding: "8px 16px 2px",
+                borderTop: "1px solid #e5e5e5",
+                fontWeight: 700,
+              }}
+            >
+              <span>{t.pricelists.expenses}</span>
+              <span style={{ fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>
+                {formatAmount(totals.expenses)}
+              </span>
+            </div>
+          </div>
+        ) : (
+          <div />
+        )}
+
+        <div style={{ width: "320px", maxWidth: "100%" }}>
+          <TotalLine label={t.pricelists.subtotal} value={formatAmount(totals.subtotal)} />
+          {totals.commission ? (
+            <TotalLine
+              label={
+                priceList.commissionIsPercent
+                  ? `${t.pricelists.commission} (${priceList.commission}${t.pricelists.percent})`
+                  : t.pricelists.commission
+              }
+              value={`− ${formatAmount(totals.commission)}`}
+            />
+          ) : null}
+          {totals.expenses ? (
+            <TotalLine
+              label={t.pricelists.expenses}
+              value={`− ${formatAmount(totals.expenses)}`}
+            />
+          ) : null}
+          <div
             style={{
-              fontSize: "22px",
-              fontWeight: 700,
-              color: company.accentColor,
-              fontVariantNumeric: "tabular-nums",
+              display: "flex",
+              alignItems: "baseline",
+              justifyContent: "space-between",
+              gap: "16px",
+              marginTop: "6px",
+              background: "#f5f5f5",
+              borderTop: `2px solid ${company.primaryColor}`,
+              padding: "12px 16px",
+              borderRadius: "6px",
             }}
           >
-            {formatMoney(totals.grandTotal)}
-          </span>
+            <span style={{ fontSize: "13px", fontWeight: 700 }}>{t.pricelists.grandTotal}</span>
+            <span
+              style={{
+                fontSize: "22px",
+                fontWeight: 700,
+                color: company.accentColor,
+                fontVariantNumeric: "tabular-nums",
+              }}
+            >
+              {formatMoney(totals.grandTotal)}
+            </span>
+          </div>
         </div>
       </div>
 
