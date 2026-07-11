@@ -2,7 +2,7 @@ import { forwardRef } from "react"
 import { ClipboardList } from "lucide-react"
 import { useLanguage, useT } from "@/i18n/LanguageProvider"
 import { formatAmount, formatMoney, rowBalance } from "@/lib/formatters"
-import type { Company, Ledger as LedgerType } from "@/types"
+import { DEFAULT_LEDGER_COLUMNS, type Company, type Ledger as LedgerType } from "@/types"
 
 type Props = {
   ledger: LedgerType
@@ -17,6 +17,15 @@ export const LedgerTemplate = forwardRef<HTMLDivElement, Props>(function LedgerT
 ) {
   const t = useT()
   const { dir, language } = useLanguage()
+  const columns = { ...DEFAULT_LEDGER_COLUMNS, ...(company.ledgerColumns ?? {}) }
+
+  // Columns before the running-balance column, used to size the footer's
+  // "grand total" label cell so it lines up under the right columns.
+  const preBalanceCount =
+    1 + (columns.invoice ? 1 : 0) + (columns.commission ? 1 : 0) + (columns.cash ? 1 : 0)
+  const grandTotalColSpan = columns.balance
+    ? preBalanceCount
+    : preBalanceCount + (columns.date ? 1 : 0)
 
   // مانده is a running balance: each row carries the previous rows forward.
   const cumulativeBalances: number[] = (() => {
@@ -40,11 +49,8 @@ export const LedgerTemplate = forwardRef<HTMLDivElement, Props>(function LedgerT
   const formatRowDate = (value?: string) => {
     if (!value) return ""
     try {
-      return new Date(value).toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "numeric",
-        day: "numeric",
-      })
+      const d = new Date(value)
+      return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`
     } catch {
       return value
     }
@@ -156,21 +162,31 @@ export const LedgerTemplate = forwardRef<HTMLDivElement, Props>(function LedgerT
             <th style={{ padding: cellPadding, textAlign: "start", fontWeight: 600 }}>
               {t.ledgers.name}
             </th>
-            <th style={{ padding: cellPadding, textAlign: "end", fontWeight: 600 }}>
-              {t.ledgers.invoice}
-            </th>
-            <th style={{ padding: cellPadding, textAlign: "end", fontWeight: 600 }}>
-              {t.ledgers.commission}
-            </th>
-            <th style={{ padding: cellPadding, textAlign: "end", fontWeight: 600 }}>
-              {t.ledgers.cash}
-            </th>
-            <th style={{ padding: cellPadding, textAlign: "end", fontWeight: 600 }}>
-              {t.ledgers.balance}
-            </th>
-            <th style={{ padding: cellPadding, textAlign: "start", fontWeight: 600 }}>
-              {t.common.date}
-            </th>
+            {columns.invoice ? (
+              <th style={{ padding: cellPadding, textAlign: "end", fontWeight: 600 }}>
+                {t.ledgers.invoice}
+              </th>
+            ) : null}
+            {columns.commission ? (
+              <th style={{ padding: cellPadding, textAlign: "end", fontWeight: 600 }}>
+                {t.ledgers.commission}
+              </th>
+            ) : null}
+            {columns.cash ? (
+              <th style={{ padding: cellPadding, textAlign: "end", fontWeight: 600 }}>
+                {t.ledgers.cash}
+              </th>
+            ) : null}
+            {columns.balance ? (
+              <th style={{ padding: cellPadding, textAlign: "end", fontWeight: 600 }}>
+                {t.ledgers.balance}
+              </th>
+            ) : null}
+            {columns.date ? (
+              <th style={{ padding: cellPadding, textAlign: "start", fontWeight: 600 }}>
+                {t.common.date}
+              </th>
+            ) : null}
           </tr>
         </thead>
         <tbody>
@@ -183,28 +199,38 @@ export const LedgerTemplate = forwardRef<HTMLDivElement, Props>(function LedgerT
             return (
               <tr key={row.id}>
                 <td style={{ ...cellStyle, fontWeight: 500 }}>{row.name}</td>
-                <td style={{ ...cellStyle, ...numCellBase }}>
-                  {formatAmount(row.invoice)}
-                </td>
-                <td style={{ ...cellStyle, ...numCellBase }}>
-                  {formatAmount(row.commission)}
-                </td>
-                <td style={{ ...cellStyle, ...numCellBase }}>
-                  {formatAmount(row.cash)}
-                </td>
-                <td
-                  style={{
-                    ...cellStyle,
-                    ...numCellBase,
-                    fontWeight: 600,
-                    color: company.accentColor,
-                  }}
-                >
-                  {formatAmount(cumulativeBalances[idx])}
-                </td>
-                <td style={{ ...cellStyle, color: "#525252", whiteSpace: "nowrap" }}>
-                  {formatRowDate(row.date)}
-                </td>
+                {columns.invoice ? (
+                  <td style={{ ...cellStyle, ...numCellBase }}>
+                    {formatAmount(row.invoice)}
+                  </td>
+                ) : null}
+                {columns.commission ? (
+                  <td style={{ ...cellStyle, ...numCellBase }}>
+                    {formatAmount(row.commission)}
+                  </td>
+                ) : null}
+                {columns.cash ? (
+                  <td style={{ ...cellStyle, ...numCellBase }}>
+                    {formatAmount(row.cash)}
+                  </td>
+                ) : null}
+                {columns.balance ? (
+                  <td
+                    style={{
+                      ...cellStyle,
+                      ...numCellBase,
+                      fontWeight: 600,
+                      color: company.accentColor,
+                    }}
+                  >
+                    {formatAmount(cumulativeBalances[idx])}
+                  </td>
+                ) : null}
+                {columns.date ? (
+                  <td style={{ ...cellStyle, color: "#525252", whiteSpace: "nowrap" }}>
+                    {formatRowDate(row.date)}
+                  </td>
+                ) : null}
               </tr>
             )
           })}
@@ -212,7 +238,7 @@ export const LedgerTemplate = forwardRef<HTMLDivElement, Props>(function LedgerT
         <tfoot>
           <tr>
             <td
-              colSpan={4}
+              colSpan={grandTotalColSpan}
               style={{
                 padding: footerCellPadding,
                 fontWeight: 700,
@@ -220,27 +246,33 @@ export const LedgerTemplate = forwardRef<HTMLDivElement, Props>(function LedgerT
                 borderTop: "1px solid #d4d4d4",
               }}
             >
-              {t.ledgers.grandTotal}
+              {columns.balance
+                ? t.ledgers.grandTotal
+                : `${t.ledgers.grandTotal}: ${formatMoney(grandTotal)}`}
             </td>
-            <td
-              style={{
-                ...numCellBase,
-                padding: footerCellPadding,
-                fontWeight: 700,
-                background: "#f5f5f5",
-                color: company.accentColor,
-                borderTop: "1px solid #d4d4d4",
-              }}
-            >
-              {formatMoney(grandTotal)}
-            </td>
-            <td
-              style={{
-                padding: footerCellPadding,
-                background: "#f5f5f5",
-                borderTop: "1px solid #d4d4d4",
-              }}
-            />
+            {columns.balance ? (
+              <td
+                style={{
+                  ...numCellBase,
+                  padding: footerCellPadding,
+                  fontWeight: 700,
+                  background: "#f5f5f5",
+                  color: company.accentColor,
+                  borderTop: "1px solid #d4d4d4",
+                }}
+              >
+                {formatMoney(grandTotal)}
+              </td>
+            ) : null}
+            {columns.balance && columns.date ? (
+              <td
+                style={{
+                  padding: footerCellPadding,
+                  background: "#f5f5f5",
+                  borderTop: "1px solid #d4d4d4",
+                }}
+              />
+            ) : null}
           </tr>
         </tfoot>
       </table>

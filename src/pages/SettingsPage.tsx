@@ -24,6 +24,7 @@ import {
 } from "@/hooks/useUnsavedChangesGuard"
 import { toLatinDigits } from "@/lib/digits"
 import {
+  DEFAULT_LEDGER_COLUMNS,
   DEFAULT_PRICE_LIST_CONFIG,
   DEFAULT_RECEIPT_COLUMNS,
   type ReceiptColumns,
@@ -186,6 +187,42 @@ export function SettingsPage() {
                       setCompany({
                         ...company,
                         receiptColumns: { ...columns, [key]: checked },
+                      })
+                    }}
+                  />
+                </div>
+              )
+            })}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>{t.settings.ledgerColumns}</CardTitle>
+            <CardDescription>{t.settings.ledgerColumnsDesc}</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-3">
+            {([
+              ["invoice", t.settings.showInvoice],
+              ["commission", t.settings.showCommission],
+              ["cash", t.settings.showCash],
+              ["balance", t.settings.showBalance],
+              ["date", t.settings.showDate],
+            ] as const).map(([key, label]) => {
+              const columns = { ...DEFAULT_LEDGER_COLUMNS, ...(company.ledgerColumns ?? {}) }
+              const id = `ledger-col-${key}`
+              return (
+                <div key={key} className="flex items-center justify-between gap-3 rounded-md border p-3">
+                  <Label htmlFor={id} className="cursor-pointer">
+                    {label}
+                  </Label>
+                  <Switch
+                    id={id}
+                    checked={columns[key]}
+                    onCheckedChange={(checked) => {
+                      setCompany({
+                        ...company,
+                        ledgerColumns: { ...columns, [key]: checked },
                       })
                     }}
                   />

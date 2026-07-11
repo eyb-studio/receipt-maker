@@ -22,6 +22,22 @@ export const DEFAULT_PRICE_LIST_CONFIG: PriceListConfig = {
   maxColumns: 3,
 }
 
+export type LedgerColumns = {
+  invoice: boolean
+  commission: boolean
+  cash: boolean
+  balance: boolean
+  date: boolean
+}
+
+export const DEFAULT_LEDGER_COLUMNS: LedgerColumns = {
+  invoice: true,
+  commission: true,
+  cash: true,
+  balance: true,
+  date: true,
+}
+
 export type Company = {
   name: string
   logo?: string
@@ -29,6 +45,7 @@ export type Company = {
   accentColor: string
   receiptColumns?: ReceiptColumns
   priceListConfig?: PriceListConfig
+  ledgerColumns?: LedgerColumns
 }
 
 export type Client = {
