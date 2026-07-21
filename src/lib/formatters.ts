@@ -1,3 +1,5 @@
+import { MAN_KG } from "@/types"
+
 export function formatUnitWeight(value: number): string {
   if (!isFinite(value)) return ""
   return stripTrailing(value.toFixed(2))
@@ -25,6 +27,41 @@ export function formatMoney(value: number): string {
 export function formatAmount(value: number): string {
   if (!isFinite(value)) return "0"
   return moneyFormatter.format(value)
+}
+
+// ── فيش من (man receipt) math ───────────────────────────────────────────────
+// Rates are quoted per من (4 kg), so a line's amount is the weight converted
+// into من and multiplied by the rate.
+
+export function manLineAmount(item: { weight: number; pricePerMan: number }): number {
+  return ((item.weight || 0) / MAN_KG) * (item.pricePerMan || 0)
+}
+
+// Shown while entering a row as a sanity check on the quoted من rate. Derived
+// only — the printed receipt prices by من.
+export function pricePerKg(pricePerManRate: number): number {
+  return (pricePerManRate || 0) / MAN_KG
+}
+
+// Same deductions as a fish receipt, plus the total weight the sheet is sold by.
+export function manReceiptTotals(mr: {
+  items: { weight: number; pricePerMan: number }[]
+  commission?: number
+  commissionIsPercent?: boolean
+  expenseItems?: { amount: number }[]
+}): {
+  subtotal: number
+  commission: number
+  expenses: number
+  grandTotal: number
+  totalWeight: number
+} {
+  const totals = priceListTotals({
+    ...mr,
+    items: mr.items.map((it) => ({ price: manLineAmount(it) })),
+  })
+  const totalWeight = mr.items.reduce((sum, it) => sum + (it.weight || 0), 0)
+  return { ...totals, totalWeight }
 }
 
 export function rowBalance(row: {

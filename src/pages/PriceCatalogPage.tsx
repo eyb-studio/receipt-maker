@@ -13,7 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { toast } from "sonner"
-import { usePriceCatalog } from "@/lib/storage"
+import { useManCatalog, usePriceCatalog } from "@/lib/storage"
 import { useT } from "@/i18n/LanguageProvider"
 import { PageHeader } from "@/components/PageHeader"
 import { EmptyState } from "@/components/EmptyState"
@@ -22,9 +22,26 @@ import { toLatinDigits } from "@/lib/digits"
 import { formatAmount } from "@/lib/formatters"
 import type { CatalogItem } from "@/types"
 
-export function PriceCatalogPage() {
+// The fish-receipt and فيش من catalogs are the same screen over different
+// storage: one remembers a line price, the other a per-kg rate.
+type Variant = "pricelist" | "man"
+
+export function ManCatalogPage() {
+  return <PriceCatalogPage variant="man" />
+}
+
+export function PriceCatalogPage({ variant = "pricelist" }: { variant?: Variant } = {}) {
   const t = useT()
-  const { catalog, addCatalogItem, updateCatalogItem, deleteCatalogItem } = usePriceCatalog()
+  const isMan = variant === "man"
+  const priceCatalog = usePriceCatalog()
+  const manCatalog = useManCatalog()
+  const { catalog, addCatalogItem, updateCatalogItem, deleteCatalogItem } = isMan
+    ? manCatalog
+    : priceCatalog
+  const backTo = isMan ? "/manreceipts" : "/pricelists"
+  const catalogTitle = isMan ? t.manreceipts.catalogTitle : t.pricelists.catalogTitle
+  const catalogEmpty = isMan ? t.manreceipts.catalogEmpty : t.pricelists.catalogEmpty
+  const priceLabel = isMan ? t.manreceipts.defaultPricePerMan : t.pricelists.defaultPrice
   const [editing, setEditing] = useState<CatalogItem | null>(null)
   const [open, setOpen] = useState(false)
   const [toDelete, setToDelete] = useState<CatalogItem | null>(null)
@@ -58,11 +75,11 @@ export function PriceCatalogPage() {
   return (
     <>
       <PageHeader
-        title={t.pricelists.catalogTitle}
+        title={catalogTitle}
         actions={
           <div className="flex items-center gap-2">
             <Button variant="ghost" asChild>
-              <Link to="/pricelists">
+              <Link to={backTo}>
                 <ArrowLeft className="size-4 rtl:rotate-180" />
                 {t.actions.back}
               </Link>
@@ -78,7 +95,7 @@ export function PriceCatalogPage() {
       {catalog.length === 0 ? (
         <EmptyState
           icon={ListChecks}
-          message={t.pricelists.catalogEmpty}
+          message={catalogEmpty}
           action={
             <Button onClick={openCreate} variant="outline">
               <Plus className="size-4" />
@@ -141,7 +158,7 @@ export function PriceCatalogPage() {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="price">{t.pricelists.defaultPrice}</Label>
+              <Label htmlFor="price">{priceLabel}</Label>
               <Input
                 id="price"
                 name="price"

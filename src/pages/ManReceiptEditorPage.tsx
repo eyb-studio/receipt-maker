@@ -8,17 +8,25 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "sonner"
-import { usePriceCatalog, usePriceLists } from "@/lib/storage"
+import { useManCatalog, useManReceipts } from "@/lib/storage"
 import { useT } from "@/i18n/LanguageProvider"
 import { PageHeader } from "@/components/PageHeader"
 import { toLatinDigits } from "@/lib/digits"
-import { formatAmount, formatMoney, priceListTotals } from "@/lib/formatters"
-import type { CatalogItem, PriceListItem } from "@/types"
+import {
+  formatAmount,
+  formatMoney,
+  formatTotalWeight,
+  manLineAmount,
+  manReceiptTotals,
+  pricePerKg,
+} from "@/lib/formatters"
+import type { CatalogItem, ManReceiptItem } from "@/types"
 
 type DraftItem = {
   id: string
   name: string
-  price: string
+  weight: string
+  pricePerMan: string
 }
 
 type DraftExpense = {
@@ -40,17 +48,17 @@ function todayISO(): string {
 }
 
 function newDraftItem(): DraftItem {
-  return { id: crypto.randomUUID(), name: "", price: "" }
+  return { id: crypto.randomUUID(), name: "", weight: "", pricePerMan: "" }
 }
 
-export function PriceListEditorPage() {
+export function ManReceiptEditorPage() {
   const t = useT()
   const { id } = useParams<{ id?: string }>()
   const navigate = useNavigate()
-  const { priceLists, addPriceList, updatePriceList } = usePriceLists()
-  const { catalog, learnItems } = usePriceCatalog()
+  const { manReceipts, addManReceipt, updateManReceipt } = useManReceipts()
+  const { catalog, learnItems } = useManCatalog()
 
-  const existing = id ? priceLists.find((p) => p.id === id) : undefined
+  const existing = id ? manReceipts.find((m) => m.id === id) : undefined
   const isEdit = Boolean(existing)
 
   const [title, setTitle] = useState<string>(existing?.title ?? "")
@@ -65,30 +73,28 @@ export function PriceListEditorPage() {
   const [basketCount, setBasketCount] = useState<string>(
     existing?.basketCount ? String(existing.basketCount) : ""
   )
-  const [expenseRows, setExpenseRows] = useState<DraftExpense[]>(() => {
-    if (existing?.expenseItems?.length) {
-      return existing.expenseItems.map((e) => ({
-        id: e.id,
-        label: e.label,
-        amount: String(e.amount),
-      }))
-    }
-    if (existing?.expenses) {
-      return [{ id: crypto.randomUUID(), label: "", amount: String(existing.expenses) }]
-    }
-    return []
-  })
+  const [expenseRows, setExpenseRows] = useState<DraftExpense[]>(() =>
+    existing?.expenseItems?.length
+      ? existing.expenseItems.map((e) => ({
+          id: e.id,
+          label: e.label,
+          amount: String(e.amount),
+        }))
+      : []
+  )
   const [items, setItems] = useState<DraftItem[]>(() =>
     existing && existing.items.length
       ? existing.items.map((it) => ({
           id: it.id,
           name: it.name,
-          price: String(it.price),
+          weight: String(it.weight),
+          pricePerMan: String(it.pricePerMan),
         }))
       : [newDraftItem()]
   )
 
   const nameRefs = useRef<Map<string, HTMLInputElement | null>>(new Map())
+  const weightRefs = useRef<Map<string, HTMLInputElement | null>>(new Map())
   const priceRefs = useRef<Map<string, HTMLInputElement | null>>(new Map())
   const focusNameId = useRef<string | null>(null)
 
@@ -99,10 +105,15 @@ export function PriceListEditorPage() {
     }
   }, [items])
 
+  const draftToItem = (it: DraftItem) => ({
+    weight: Number(it.weight) || 0,
+    pricePerMan: Number(it.pricePerMan) || 0,
+  })
+
   const totals = useMemo(
     () =>
-      priceListTotals({
-        items: items.map((it) => ({ price: Number(it.price) || 0 })),
+      manReceiptTotals({
+        items: items.map(draftToItem),
         commission: Number(commission) || 0,
         commissionIsPercent,
         expenseItems: expenseRows.map((e) => ({ amount: Number(e.amount) || 0 })),
@@ -110,16 +121,37 @@ export function PriceListEditorPage() {
     [items, commission, commissionIsPercent, expenseRows]
   )
 
+  const catalogByName = useMemo(() => {
+    const map = new Map<string, CatalogItem>()
+    for (const c of catalog) map.set(c.name.trim().toLowerCase(), c)
+    return map
+  }, [catalog])
+
   const updateItem = (itemId: string, patch: Partial<DraftItem>) => {
-    setItems((prev) => prev.map((it) => (it.id === itemId ? { ...it, ...patch } : it)))
+    setItems((prev) =>
+      prev.map((it) => {
+        if (it.id !== itemId) return it
+        const next = { ...it, ...patch }
+        // Auto-fill the per-من rate when the typed name exactly matches a saved
+        // item and no rate has been entered yet.
+        if (patch.name !== undefined && !next.pricePerMan.trim()) {
+          const match = catalogByName.get(patch.name.trim().toLowerCase())
+          if (match) next.pricePerMan = String(match.price)
+        }
+        return next
+      })
+    )
   }
 
-  // Suggestions only ever fill the item name — the price is always typed by hand.
   const applySuggestion = (itemId: string, suggestion: CatalogItem) => {
     setItems((prev) =>
-      prev.map((it) => (it.id === itemId ? { ...it, name: suggestion.name } : it))
+      prev.map((it) =>
+        it.id === itemId
+          ? { ...it, name: suggestion.name, pricePerMan: String(suggestion.price) }
+          : it
+      )
     )
-    requestAnimationFrame(() => priceRefs.current.get(itemId)?.focus())
+    requestAnimationFrame(() => weightRefs.current.get(itemId)?.focus())
   }
 
   const removeItem = (itemId: string) => {
@@ -132,7 +164,7 @@ export function PriceListEditorPage() {
     setItems((prev) => [...prev, row])
   }
 
-  // Enter on the price field commits the row and jumps to a fresh one.
+  // Enter on the rate field commits the row and jumps to a fresh one.
   const handlePriceEnter = (itemId: string) => {
     const isLast = items[items.length - 1]?.id === itemId
     if (isLast) {
@@ -154,18 +186,23 @@ export function PriceListEditorPage() {
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    const validItems: PriceListItem[] = []
+    const validItems: ManReceiptItem[] = []
     for (const it of items) {
       const name = it.name.trim()
-      const price = Number(it.price) || 0
-      if (!name && price === 0) continue
-      validItems.push({ id: it.id, name, price })
+      const weight = Number(it.weight) || 0
+      const rate = Number(it.pricePerMan) || 0
+      if (!name && weight === 0 && rate === 0) continue
+      validItems.push({ id: it.id, name, weight, pricePerMan: rate })
     }
     if (validItems.length === 0) {
       toast.error(t.pricelists.noItems)
       return
     }
-    learnItems(validItems.filter((it) => it.name))
+    learnItems(
+      validItems
+        .filter((it) => it.name)
+        .map((it) => ({ name: it.name, price: it.pricePerMan }))
+    )
     const commissionVal = Number(commission) || 0
     const expenseItems = expenseRows
       .map((r) => ({
@@ -183,27 +220,26 @@ export function PriceListEditorPage() {
       commission: commissionVal || undefined,
       commissionIsPercent: commissionVal ? commissionIsPercent : undefined,
       expenseItems: expenseItems.length ? expenseItems : undefined,
-      expenses: undefined,
       notes: notes.trim() || undefined,
     }
     if (existing) {
-      updatePriceList(existing.id, payload)
-      toast.success(t.pricelists.saved)
-      navigate(`/pricelists/${existing.id}`)
+      updateManReceipt(existing.id, payload)
+      toast.success(t.manreceipts.saved)
+      navigate(`/manreceipts/${existing.id}`)
     } else {
-      const created = addPriceList(payload)
-      toast.success(t.pricelists.added)
-      navigate(`/pricelists/${created.id}`)
+      const created = addManReceipt(payload)
+      toast.success(t.manreceipts.added)
+      navigate(`/manreceipts/${created.id}`)
     }
   }
 
   return (
     <>
       <PageHeader
-        title={isEdit ? t.pricelists.editTitle : t.pricelists.newTitle}
+        title={isEdit ? t.manreceipts.editTitle : t.manreceipts.newTitle}
         actions={
           <Button variant="ghost" asChild>
-            <Link to="/pricelists">
+            <Link to="/manreceipts">
               <ArrowLeft className="size-4 rtl:rotate-180" />
               {t.actions.back}
             </Link>
@@ -250,10 +286,12 @@ export function PriceListEditorPage() {
         <Card>
           <CardContent className="grid gap-2">
             <p className="text-muted-foreground text-xs">{t.pricelists.suggestionsHint}</p>
-            <div className="text-muted-foreground hidden grid-cols-[2rem_1fr_140px_40px] gap-2 px-1 text-xs font-medium uppercase sm:grid">
+            <div className="text-muted-foreground hidden grid-cols-[2rem_1fr_110px_130px_110px_40px] gap-2 px-1 text-xs font-medium uppercase sm:grid">
               <div className="text-center">#</div>
               <div>{t.pricelists.item}</div>
-              <div>{t.pricelists.price}</div>
+              <div>{t.manreceipts.weight}</div>
+              <div>{t.manreceipts.pricePerMan}</div>
+              <div className="text-end">{t.manreceipts.amount}</div>
               <div />
             </div>
 
@@ -265,6 +303,7 @@ export function PriceListEditorPage() {
                 suggestions={catalog}
                 canRemove={items.length > 1}
                 registerNameRef={(el) => nameRefs.current.set(item.id, el)}
+                registerWeightRef={(el) => weightRefs.current.set(item.id, el)}
                 registerPriceRef={(el) => priceRefs.current.set(item.id, el)}
                 onChange={(patch) => updateItem(item.id, patch)}
                 onApplySuggestion={(s) => applySuggestion(item.id, s)}
@@ -364,9 +403,10 @@ export function PriceListEditorPage() {
 
             <div className="grid gap-2 border-t pt-4 text-sm">
               <TotalRow
-                label={t.pricelists.subtotal}
-                value={formatAmount(totals.subtotal)}
+                label={t.manreceipts.totalWeight}
+                value={formatTotalWeight(totals.totalWeight)}
               />
+              <TotalRow label={t.pricelists.subtotal} value={formatAmount(totals.subtotal)} />
               {totals.commission ? (
                 <TotalRow
                   label={
@@ -439,6 +479,7 @@ type ItemRowProps = {
   suggestions: CatalogItem[]
   canRemove: boolean
   registerNameRef: (el: HTMLInputElement | null) => void
+  registerWeightRef: (el: HTMLInputElement | null) => void
   registerPriceRef: (el: HTMLInputElement | null) => void
   onChange: (patch: Partial<DraftItem>) => void
   onApplySuggestion: (s: CatalogItem) => void
@@ -452,6 +493,7 @@ function ItemRow({
   suggestions,
   canRemove,
   registerNameRef,
+  registerWeightRef,
   registerPriceRef,
   onChange,
   onApplySuggestion,
@@ -461,7 +503,7 @@ function ItemRow({
   const t = useT()
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(0)
-  const priceRef = useRef<HTMLInputElement | null>(null)
+  const weightRef = useRef<HTMLInputElement | null>(null)
   const nameRef = useRef<HTMLInputElement | null>(null)
   const [menuRect, setMenuRect] = useState<{ left: number; top: number; width: number } | null>(
     null
@@ -476,6 +518,12 @@ function ItemRow({
   }, [suggestions, query])
 
   const showMenu = open && matches.length > 0
+
+  const rate = Number(item.pricePerMan) || 0
+  const amount = manLineAmount({
+    weight: Number(item.weight) || 0,
+    pricePerMan: rate,
+  })
 
   // The dropdown is rendered in a portal with fixed positioning so it can't be
   // clipped by the Card's `overflow-hidden`. Keep it aligned to the input.
@@ -509,7 +557,7 @@ function ItemRow({
         onApplySuggestion(matches[active])
         setOpen(false)
       } else {
-        priceRef.current?.focus()
+        weightRef.current?.focus()
       }
     } else if (e.key === "Escape") {
       setOpen(false)
@@ -517,7 +565,7 @@ function ItemRow({
   }
 
   return (
-    <div className="grid gap-2 sm:grid-cols-[2rem_1fr_140px_40px] sm:items-center">
+    <div className="grid gap-2 sm:grid-cols-[2rem_1fr_110px_130px_110px_40px] sm:items-center">
       <div className="text-muted-foreground hidden text-center text-sm tabular-nums sm:block">
         {index + 1}
       </div>
@@ -563,6 +611,9 @@ function ItemRow({
                       onMouseEnter={() => setActive(i)}
                     >
                       <span className="truncate">{s.name}</span>
+                      <span dir="ltr" className="text-muted-foreground tabular-nums">
+                        {s.price}
+                      </span>
                     </button>
                   </li>
                 ))}
@@ -573,22 +624,45 @@ function ItemRow({
       </div>
       <Input
         ref={(el) => {
-          priceRef.current = el
-          registerPriceRef(el)
+          weightRef.current = el
+          registerWeightRef(el)
         }}
         type="text"
         inputMode="decimal"
         dir="ltr"
-        placeholder={t.pricelists.price}
-        value={item.price}
-        onChange={(e) => onChange({ price: toLatinDigits(e.target.value) })}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            e.preventDefault()
-            onPriceEnter()
-          }
-        }}
+        placeholder={t.manreceipts.weight}
+        value={item.weight}
+        onChange={(e) => onChange({ weight: toLatinDigits(e.target.value) })}
       />
+      <div>
+        <Input
+          ref={registerPriceRef}
+          type="text"
+          inputMode="decimal"
+          dir="ltr"
+          placeholder={t.manreceipts.pricePerMan}
+          value={item.pricePerMan}
+          onChange={(e) => onChange({ pricePerMan: toLatinDigits(e.target.value) })}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault()
+              onPriceEnter()
+            }
+          }}
+        />
+        {/* Entry-time cross-check only - the printed receipt prices by man. */}
+        {rate ? (
+          <div className="text-muted-foreground mt-1 px-1 text-xs tabular-nums" dir="ltr">
+            {`${formatAmount(pricePerKg(rate))} / ${t.manreceipts.pricePerKg}`}
+          </div>
+        ) : null}
+      </div>
+      <div
+        className="text-end text-sm font-medium tabular-nums sm:px-1"
+        dir="ltr"
+      >
+        {amount ? formatAmount(amount) : "—"}
+      </div>
       <Button
         type="button"
         variant="ghost"

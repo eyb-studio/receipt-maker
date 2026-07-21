@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from "react-router-dom"
-import { ClipboardList, Package, Receipt, ScrollText, Settings, Users } from "lucide-react"
+import { ClipboardList, Package, Receipt, Scale, ScrollText, Settings, Users } from "lucide-react"
 import { useT } from "@/i18n/LanguageProvider"
 import { useCompany } from "@/lib/storage"
 import { cn } from "@/lib/utils"
@@ -14,6 +14,7 @@ export function AppShell() {
     { to: "/", label: t.nav.receipts, icon: Receipt, end: true },
     { to: "/ledgers", label: t.nav.ledgers, icon: ClipboardList },
     { to: "/pricelists", label: t.nav.pricelists, icon: ScrollText },
+    { to: "/manreceipts", label: t.nav.manreceipts, icon: Scale },
     { to: "/clients", label: t.nav.clients, icon: Users },
     { to: "/products", label: t.nav.products, icon: Package },
     { to: "/settings", label: t.nav.settings, icon: Settings },

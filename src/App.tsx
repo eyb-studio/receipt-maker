@@ -12,7 +12,10 @@ import { LedgerViewPage } from "@/pages/LedgerViewPage"
 import { PriceListsListPage } from "@/pages/PriceListsListPage"
 import { PriceListEditorPage } from "@/pages/PriceListEditorPage"
 import { PriceListViewPage } from "@/pages/PriceListViewPage"
-import { PriceCatalogPage } from "@/pages/PriceCatalogPage"
+import { ManCatalogPage, PriceCatalogPage } from "@/pages/PriceCatalogPage"
+import { ManReceiptsListPage } from "@/pages/ManReceiptsListPage"
+import { ManReceiptEditorPage } from "@/pages/ManReceiptEditorPage"
+import { ManReceiptViewPage } from "@/pages/ManReceiptViewPage"
 import { ClientsPage } from "@/pages/ClientsPage"
 import { ProductsPage } from "@/pages/ProductsPage"
 import { SettingsPage } from "@/pages/SettingsPage"
@@ -34,6 +37,11 @@ const router = createBrowserRouter([
       { path: "pricelists/catalog", element: <PriceCatalogPage /> },
       { path: "pricelists/:id", element: <PriceListViewPage /> },
       { path: "pricelists/:id/edit", element: <PriceListEditorPage /> },
+      { path: "manreceipts", element: <ManReceiptsListPage /> },
+      { path: "manreceipts/new", element: <ManReceiptEditorPage /> },
+      { path: "manreceipts/catalog", element: <ManCatalogPage /> },
+      { path: "manreceipts/:id", element: <ManReceiptViewPage /> },
+      { path: "manreceipts/:id/edit", element: <ManReceiptEditorPage /> },
       { path: "clients", element: <ClientsPage /> },
       { path: "products", element: <ProductsPage /> },
       { path: "settings", element: <SettingsPage /> },

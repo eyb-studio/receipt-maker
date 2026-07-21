@@ -138,6 +138,33 @@ export type PriceList = {
   createdAt: number
 }
 
+// One من (man) — the Iranian market unit fish rates are quoted in.
+export const MAN_KG = 4
+
+// A فيش من line: the weight bought and the agreed per-من rate (the market
+// convention). The line amount is derived, never stored.
+export type ManReceiptItem = {
+  id: string
+  name: string
+  weight: number // kg
+  pricePerMan: number
+}
+
+// Mirrors PriceList (same حق / هزینه‌ها deductions) but priced by weight.
+export type ManReceipt = {
+  id: string
+  number: number
+  title: string
+  date: string
+  basketCount?: number
+  items: ManReceiptItem[]
+  commission?: number
+  commissionIsPercent?: boolean
+  expenseItems?: ExpenseItem[]
+  notes?: string
+  createdAt: number
+}
+
 // Auto-learned catalog of item names + their last-used price, used to
 // power autocomplete in the price-list editor. Also editable by hand.
 export type CatalogItem = {

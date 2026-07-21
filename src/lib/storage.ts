@@ -1,6 +1,15 @@
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useMemo, useState, useCallback } from "react"
 import { DEFAULT_PRICE_LIST_CONFIG } from "@/types"
-import type { CatalogItem, Client, Company, Ledger, PriceList, Product, Receipt } from "@/types"
+import type {
+  CatalogItem,
+  Client,
+  Company,
+  Ledger,
+  ManReceipt,
+  PriceList,
+  Product,
+  Receipt,
+} from "@/types"
 
 const KEYS = {
   company: "receipt-maker:company",
@@ -13,6 +22,9 @@ const KEYS = {
   priceLists: "receipt-maker:price-lists",
   priceListCounter: "receipt-maker:price-list-counter",
   priceCatalog: "receipt-maker:price-catalog",
+  manReceipts: "receipt-maker:man-receipts",
+  manReceiptCounter: "receipt-maker:man-receipt-counter",
+  manCatalog: "receipt-maker:man-catalog",
   schemaVersion: "receipt-maker:schema-version",
 } as const
 
@@ -210,12 +222,38 @@ export function useLedgers() {
 
 // ── Price-list item catalog (autocomplete source) ───────────────────────────
 
-export function usePriceCatalog() {
-  const [catalog, setCatalog] = useStored<CatalogItem[]>(KEYS.priceCatalog, [])
+// Names are matched case-insensitively and ignoring stray whitespace, so
+// "Oil  Change" and "oil change" are the same catalog entry.
+const catalogKey = (name: string) => name.trim().replace(/\s+/g, " ").toLowerCase()
+
+const dedupeCatalog = (items: CatalogItem[]) => {
+  const byName = new Map<string, CatalogItem>()
+  for (const c of items) {
+    const key = catalogKey(c.name)
+    if (!key) continue
+    const existing = byName.get(key)
+    // Keep the most recently created entry when the same name appears twice.
+    if (!existing || c.createdAt > existing.createdAt) byName.set(key, c)
+  }
+  return Array.from(byName.values())
+}
+
+// Two catalogs share this logic but not their data: the fish-receipt catalog
+// remembers a line price, the فيش من one a per-kg rate. Mixing them would
+// autofill wildly wrong numbers, so each gets its own storage key.
+function useCatalog(storageKey: string) {
+  const [stored, setCatalog] = useStored<CatalogItem[]>(storageKey, [])
+
+  // Collapse any duplicates that already exist in storage on read, so older
+  // data recorded before de-duplication doesn't pollute the suggestions.
+  const catalog = useMemo(() => dedupeCatalog(stored), [stored])
 
   const addCatalogItem = (data: Omit<CatalogItem, "id" | "createdAt">) => {
     const item: CatalogItem = { ...data, id: crypto.randomUUID(), createdAt: Date.now() }
-    setCatalog((prev) => [item, ...prev])
+    setCatalog((prev) => [
+      item,
+      ...dedupeCatalog(prev).filter((c) => catalogKey(c.name) !== catalogKey(item.name)),
+    ])
     return item
   }
 
@@ -234,11 +272,11 @@ export function usePriceCatalog() {
   // automatically when a price list is saved so the catalog learns over time.
   const learnItems = (items: { name: string; price: number }[]) => {
     setCatalog((prev) => {
-      const byName = new Map(prev.map((c) => [c.name.trim().toLowerCase(), c]))
+      const byName = new Map(dedupeCatalog(prev).map((c) => [catalogKey(c.name), c]))
       for (const it of items) {
-        const name = it.name.trim()
+        const name = it.name.trim().replace(/\s+/g, " ")
         if (!name) continue
-        const key = name.toLowerCase()
+        const key = catalogKey(name)
         const existing = byName.get(key)
         if (existing) {
           byName.set(key, { ...existing, name, price: it.price })
@@ -256,6 +294,14 @@ export function usePriceCatalog() {
   }
 
   return { catalog, addCatalogItem, updateCatalogItem, deleteCatalogItem, learnItems }
+}
+
+export function usePriceCatalog() {
+  return useCatalog(KEYS.priceCatalog)
+}
+
+export function useManCatalog() {
+  return useCatalog(KEYS.manCatalog)
 }
 
 function nextPriceListNumber(): number {
@@ -293,4 +339,41 @@ export function usePriceLists() {
   const getPriceList = (id: string) => priceLists.find((p) => p.id === id)
 
   return { priceLists, addPriceList, updatePriceList, deletePriceList, getPriceList }
+}
+
+function nextManReceiptNumber(): number {
+  const current = readJSON<number>(KEYS.manReceiptCounter, 1000)
+  const next = current + 1
+  writeJSON(KEYS.manReceiptCounter, next)
+  return next
+}
+
+export function useManReceipts() {
+  const [manReceipts, setManReceipts] = useStored<ManReceipt[]>(KEYS.manReceipts, [])
+
+  const addManReceipt = (data: Omit<ManReceipt, "id" | "createdAt" | "number">) => {
+    const manReceipt: ManReceipt = {
+      ...data,
+      id: crypto.randomUUID(),
+      number: nextManReceiptNumber(),
+      createdAt: Date.now(),
+    }
+    setManReceipts((prev) => [manReceipt, ...prev])
+    return manReceipt
+  }
+
+  const updateManReceipt = (
+    id: string,
+    data: Partial<Omit<ManReceipt, "id" | "createdAt" | "number">>
+  ) => {
+    setManReceipts((prev) => prev.map((m) => (m.id === id ? { ...m, ...data } : m)))
+  }
+
+  const deleteManReceipt = (id: string) => {
+    setManReceipts((prev) => prev.filter((m) => m.id !== id))
+  }
+
+  const getManReceipt = (id: string) => manReceipts.find((m) => m.id === id)
+
+  return { manReceipts, addManReceipt, updateManReceipt, deleteManReceipt, getManReceipt }
 }
