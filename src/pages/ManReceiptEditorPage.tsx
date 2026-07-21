@@ -19,6 +19,7 @@ import {
   manLineAmount,
   manReceiptTotals,
   pricePerKg,
+  snapPriceInput,
 } from "@/lib/formatters"
 import type { CatalogItem, ManReceiptItem } from "@/types"
 
@@ -643,6 +644,7 @@ function ItemRow({
           placeholder={t.manreceipts.pricePerMan}
           value={item.pricePerMan}
           onChange={(e) => onChange({ pricePerMan: toLatinDigits(e.target.value) })}
+          onBlur={() => onChange({ pricePerMan: snapPriceInput(item.pricePerMan) })}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault()

@@ -12,7 +12,7 @@ import { usePriceCatalog, usePriceLists } from "@/lib/storage"
 import { useT } from "@/i18n/LanguageProvider"
 import { PageHeader } from "@/components/PageHeader"
 import { toLatinDigits } from "@/lib/digits"
-import { formatAmount, formatMoney, priceListTotals } from "@/lib/formatters"
+import { formatAmount, formatMoney, priceListTotals, snapPriceInput } from "@/lib/formatters"
 import type { CatalogItem, PriceListItem } from "@/types"
 
 type DraftItem = {
@@ -582,6 +582,7 @@ function ItemRow({
         placeholder={t.pricelists.price}
         value={item.price}
         onChange={(e) => onChange({ price: toLatinDigits(e.target.value) })}
+        onBlur={() => onChange({ price: snapPriceInput(item.price) })}
         onKeyDown={(e) => {
           if (e.key === "Enter") {
             e.preventDefault()

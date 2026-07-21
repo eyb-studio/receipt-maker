@@ -19,7 +19,7 @@ import { PageHeader } from "@/components/PageHeader"
 import { EmptyState } from "@/components/EmptyState"
 import { ConfirmDialog } from "@/components/ConfirmDialog"
 import { toLatinDigits } from "@/lib/digits"
-import { formatAmount } from "@/lib/formatters"
+import { formatAmount, snapToFive } from "@/lib/formatters"
 import type { CatalogItem } from "@/types"
 
 // The fish-receipt and فيش من catalogs are the same screen over different
@@ -59,7 +59,9 @@ export function PriceCatalogPage({ variant = "pricelist" }: { variant?: Variant 
     e.preventDefault()
     const fd = new FormData(e.currentTarget)
     const name = String(fd.get("name") ?? "").trim()
-    const price = Number(toLatinDigits(String(fd.get("price") ?? ""))) || 0
+    // Saved prices autofill into the editors without firing a blur, so snap
+    // here too — otherwise a hand-typed 57 would slip past the rule.
+    const price = snapToFive(Number(toLatinDigits(String(fd.get("price") ?? ""))) || 0)
     if (!name) return
     if (editing) {
       updateCatalogItem(editing.id, { name, price })
