@@ -31,16 +31,22 @@ export function formatAmount(value: number): string {
 
 // ── فيش من (man receipt) math ───────────────────────────────────────────────
 // Rates are quoted per من (4 kg), so a line's amount is the weight converted
-// into من and multiplied by the rate.
+// into من and multiplied by the rate. Odd weights against an odd rate land on
+// amounts nobody settles in cash (23 kg at 24/kg is 552), so the amount — not
+// the rate the seller quoted — is what snaps to the nearest 5.
 
 export function manLineAmount(item: { weight: number; pricePerMan: number }): number {
-  return ((item.weight || 0) / MAN_KG) * (item.pricePerMan || 0)
+  return snapToFive(((item.weight || 0) / MAN_KG) * (item.pricePerMan || 0))
 }
 
-// Shown while entering a row as a sanity check on the quoted من rate. Derived
-// only — the printed receipt prices by من.
+// Rates are entered per کیلو in the editor but stored and printed per من, so the
+// two converters below bracket the editor: kg in on load, man out on save.
 export function pricePerKg(pricePerManRate: number): number {
   return (pricePerManRate || 0) / MAN_KG
+}
+
+export function pricePerManFromKg(pricePerKgRate: number): number {
+  return (pricePerKgRate || 0) * MAN_KG
 }
 
 // Same deductions as a fish receipt, plus the total weight the sheet is sold by.

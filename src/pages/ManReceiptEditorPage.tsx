@@ -19,15 +19,21 @@ import {
   manLineAmount,
   manReceiptTotals,
   pricePerKg,
-  snapPriceInput,
+  pricePerManFromKg,
 } from "@/lib/formatters"
 import type { CatalogItem, ManReceiptItem } from "@/types"
 
+// Rates are typed per کیلو. Receipts and the saved-item catalog both store the
+// من rate, so every crossing of that boundary converts.
 type DraftItem = {
   id: string
   name: string
   weight: string
-  pricePerMan: string
+  pricePerKgRate: string
+}
+
+function kgRateFromMan(manRate: number): string {
+  return manRate ? String(pricePerKg(manRate)) : ""
 }
 
 type DraftExpense = {
@@ -49,7 +55,7 @@ function todayISO(): string {
 }
 
 function newDraftItem(): DraftItem {
-  return { id: crypto.randomUUID(), name: "", weight: "", pricePerMan: "" }
+  return { id: crypto.randomUUID(), name: "", weight: "", pricePerKgRate: "" }
 }
 
 export function ManReceiptEditorPage() {
@@ -89,7 +95,7 @@ export function ManReceiptEditorPage() {
           id: it.id,
           name: it.name,
           weight: String(it.weight),
-          pricePerMan: String(it.pricePerMan),
+          pricePerKgRate: kgRateFromMan(it.pricePerMan),
         }))
       : [newDraftItem()]
   )
@@ -108,7 +114,7 @@ export function ManReceiptEditorPage() {
 
   const draftToItem = (it: DraftItem) => ({
     weight: Number(it.weight) || 0,
-    pricePerMan: Number(it.pricePerMan) || 0,
+    pricePerMan: pricePerManFromKg(Number(it.pricePerKgRate) || 0),
   })
 
   const totals = useMemo(
@@ -133,11 +139,11 @@ export function ManReceiptEditorPage() {
       prev.map((it) => {
         if (it.id !== itemId) return it
         const next = { ...it, ...patch }
-        // Auto-fill the per-من rate when the typed name exactly matches a saved
-        // item and no rate has been entered yet.
-        if (patch.name !== undefined && !next.pricePerMan.trim()) {
+        // Auto-fill the rate when the typed name exactly matches a saved item
+        // and no rate has been entered yet. Catalog prices are per من.
+        if (patch.name !== undefined && !next.pricePerKgRate.trim()) {
           const match = catalogByName.get(patch.name.trim().toLowerCase())
-          if (match) next.pricePerMan = String(match.price)
+          if (match) next.pricePerKgRate = kgRateFromMan(match.price)
         }
         return next
       })
@@ -148,7 +154,7 @@ export function ManReceiptEditorPage() {
     setItems((prev) =>
       prev.map((it) =>
         it.id === itemId
-          ? { ...it, name: suggestion.name, pricePerMan: String(suggestion.price) }
+          ? { ...it, name: suggestion.name, pricePerKgRate: kgRateFromMan(suggestion.price) }
           : it
       )
     )
@@ -191,7 +197,7 @@ export function ManReceiptEditorPage() {
     for (const it of items) {
       const name = it.name.trim()
       const weight = Number(it.weight) || 0
-      const rate = Number(it.pricePerMan) || 0
+      const rate = pricePerManFromKg(Number(it.pricePerKgRate) || 0)
       if (!name && weight === 0 && rate === 0) continue
       validItems.push({ id: it.id, name, weight, pricePerMan: rate })
     }
@@ -291,7 +297,7 @@ export function ManReceiptEditorPage() {
               <div className="text-center">#</div>
               <div>{t.pricelists.item}</div>
               <div>{t.manreceipts.weight}</div>
-              <div>{t.manreceipts.pricePerMan}</div>
+              <div>{t.manreceipts.pricePerKgLabel}</div>
               <div className="text-end">{t.manreceipts.amount}</div>
               <div />
             </div>
@@ -520,10 +526,11 @@ function ItemRow({
 
   const showMenu = open && matches.length > 0
 
-  const rate = Number(item.pricePerMan) || 0
+  const kgRate = Number(item.pricePerKgRate) || 0
+  const manRate = pricePerManFromKg(kgRate)
   const amount = manLineAmount({
     weight: Number(item.weight) || 0,
-    pricePerMan: rate,
+    pricePerMan: manRate,
   })
 
   // The dropdown is rendered in a portal with fixed positioning so it can't be
@@ -613,7 +620,7 @@ function ItemRow({
                     >
                       <span className="truncate">{s.name}</span>
                       <span dir="ltr" className="text-muted-foreground tabular-nums">
-                        {s.price}
+                        {formatAmount(pricePerKg(s.price))}
                       </span>
                     </button>
                   </li>
@@ -641,10 +648,9 @@ function ItemRow({
           type="text"
           inputMode="decimal"
           dir="ltr"
-          placeholder={t.manreceipts.pricePerMan}
-          value={item.pricePerMan}
-          onChange={(e) => onChange({ pricePerMan: toLatinDigits(e.target.value) })}
-          onBlur={() => onChange({ pricePerMan: snapPriceInput(item.pricePerMan) })}
+          placeholder={t.manreceipts.pricePerKgLabel}
+          value={item.pricePerKgRate}
+          onChange={(e) => onChange({ pricePerKgRate: toLatinDigits(e.target.value) })}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault()
@@ -652,10 +658,10 @@ function ItemRow({
             }
           }}
         />
-        {/* Entry-time cross-check only - the printed receipt prices by man. */}
-        {rate ? (
+        {/* The rate the receipt will actually print, shown as an entry-time check. */}
+        {kgRate ? (
           <div className="text-muted-foreground mt-1 px-1 text-xs tabular-nums" dir="ltr">
-            {`${formatAmount(pricePerKg(rate))} / ${t.manreceipts.pricePerKg}`}
+            {`${formatAmount(manRate)} / ${t.manreceipts.manUnit}`}
           </div>
         ) : null}
       </div>
