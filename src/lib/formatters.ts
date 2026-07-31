@@ -129,9 +129,12 @@ export function priceListTotals(pl: {
 }): { subtotal: number; commission: number; expenses: number; grandTotal: number } {
   const subtotal = pl.items.reduce((sum, it) => sum + (it.price || 0), 0)
   const rawCommission = pl.commission ?? 0
-  const commission = pl.commissionIsPercent
-    ? (subtotal * rawCommission) / 100
-    : rawCommission
+  // حق is settled in cash like everything else on the sheet, so a percentage of
+  // an odd subtotal (2.5% of 1470 is 36.75) snaps to the nearest 5 rather than
+  // printing a figure nobody can hand over.
+  const commission = snapToFive(
+    pl.commissionIsPercent ? (subtotal * rawCommission) / 100 : rawCommission
+  )
   const expenses =
     pl.expenseItems && pl.expenseItems.length
       ? pl.expenseItems.reduce((sum, e) => sum + (e.amount || 0), 0)
