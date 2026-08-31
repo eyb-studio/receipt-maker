@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
-import { ArrowLeft, Plus, Trash2 } from "lucide-react"
+import { ArrowLeft, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -18,6 +18,8 @@ import { useClients, useProducts, useReceipts } from "@/lib/storage"
 import { useT } from "@/i18n/LanguageProvider"
 import { PageHeader } from "@/components/PageHeader"
 import { NumberStepper } from "@/components/NumberStepper"
+import { RowActions } from "@/components/RowActions"
+import { insertRowAt, moveRow } from "@/lib/rows"
 import { toLatinDigits } from "@/lib/digits"
 import { formatTotalWeight, formatUnitWeight } from "@/lib/formatters"
 import type { ReceiptItem } from "@/types"
@@ -104,6 +106,19 @@ export function ReceiptEditorPage() {
     setItems((prev) => (prev.length === 1 ? prev : prev.filter((it) => it.id !== id)))
   }
   const addItem = () => setItems((prev) => [...prev, newDraftItem()])
+  const insertItemAt = (index: number) =>
+    setItems((prev) => insertRowAt(prev, index, newDraftItem()))
+  const duplicateItem = (id: string) =>
+    setItems((prev) => {
+      const idx = prev.findIndex((it) => it.id === id)
+      if (idx < 0) return prev
+      return insertRowAt(prev, idx + 1, { ...prev[idx], id: crypto.randomUUID() })
+    })
+  const moveItem = (id: string, offset: number) =>
+    setItems((prev) => {
+      const idx = prev.findIndex((it) => it.id === id)
+      return idx < 0 ? prev : moveRow(prev, idx, idx + offset)
+    })
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -221,7 +236,7 @@ export function ReceiptEditorPage() {
                   <div />
                 </div>
 
-                {items.map((item) => {
+                {items.map((item, idx) => {
                   const product = products.find((p) => p.id === item.productId)
                   const rowSum = (Number(item.quantity) || 0) * (Number(item.weight) || 0)
                   return (
@@ -297,16 +312,17 @@ export function ReceiptEditorPage() {
                         <span className="text-foreground">{formatUnitWeight(rowSum)}</span>
                         <span className="text-xs">kg</span>
                       </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeItem(item.id)}
-                        disabled={items.length === 1}
-                        aria-label={t.actions.remove}
-                      >
-                        <Trash2 className="size-4" />
-                      </Button>
+                      <RowActions
+                        index={idx}
+                        count={items.length}
+                        canRemove={items.length > 1}
+                        onInsertAbove={() => insertItemAt(idx)}
+                        onInsertBelow={() => insertItemAt(idx + 1)}
+                        onDuplicate={() => duplicateItem(item.id)}
+                        onMoveUp={() => moveItem(item.id, -1)}
+                        onMoveDown={() => moveItem(item.id, 1)}
+                        onRemove={() => removeItem(item.id)}
+                      />
                     </div>
                   )
                 })}

@@ -2,6 +2,8 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import { ArrowLeft, Plus, Trash2 } from "lucide-react"
+import { RowActions } from "@/components/RowActions"
+import { insertRowAt, moveRow } from "@/lib/rows"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -130,6 +132,29 @@ export function PriceListEditorPage() {
     const row = newDraftItem()
     focusNameId.current = row.id
     setItems((prev) => [...prev, row])
+  }
+
+  // Spreadsheet-style row insertion: the new row lands exactly where asked and
+  // takes the focus so typing can continue straight away.
+  const insertItemAt = (index: number) => {
+    const row = newDraftItem()
+    focusNameId.current = row.id
+    setItems((prev) => insertRowAt(prev, index, row))
+  }
+
+  const duplicateItem = (itemId: string) => {
+    setItems((prev) => {
+      const idx = prev.findIndex((it) => it.id === itemId)
+      if (idx < 0) return prev
+      return insertRowAt(prev, idx + 1, { ...prev[idx], id: crypto.randomUUID() })
+    })
+  }
+
+  const moveItem = (itemId: string, offset: number) => {
+    setItems((prev) => {
+      const idx = prev.findIndex((it) => it.id === itemId)
+      return idx < 0 ? prev : moveRow(prev, idx, idx + offset)
+    })
   }
 
   // Enter on the price field commits the row and jumps to a fresh one.
@@ -261,6 +286,7 @@ export function PriceListEditorPage() {
               <ItemRow
                 key={item.id}
                 index={idx}
+                count={items.length}
                 item={item}
                 suggestions={catalog}
                 canRemove={items.length > 1}
@@ -270,6 +296,11 @@ export function PriceListEditorPage() {
                 onApplySuggestion={(s) => applySuggestion(item.id, s)}
                 onPriceEnter={() => handlePriceEnter(item.id)}
                 onRemove={() => removeItem(item.id)}
+                onInsertAbove={() => insertItemAt(idx)}
+                onInsertBelow={() => insertItemAt(idx + 1)}
+                onDuplicate={() => duplicateItem(item.id)}
+                onMoveUp={() => moveItem(item.id, -1)}
+                onMoveDown={() => moveItem(item.id, 1)}
               />
             ))}
 
@@ -435,6 +466,7 @@ export function PriceListEditorPage() {
 
 type ItemRowProps = {
   index: number
+  count: number
   item: DraftItem
   suggestions: CatalogItem[]
   canRemove: boolean
@@ -444,10 +476,16 @@ type ItemRowProps = {
   onApplySuggestion: (s: CatalogItem) => void
   onPriceEnter: () => void
   onRemove: () => void
+  onInsertAbove: () => void
+  onInsertBelow: () => void
+  onDuplicate: () => void
+  onMoveUp: () => void
+  onMoveDown: () => void
 }
 
 function ItemRow({
   index,
+  count,
   item,
   suggestions,
   canRemove,
@@ -457,6 +495,11 @@ function ItemRow({
   onApplySuggestion,
   onPriceEnter,
   onRemove,
+  onInsertAbove,
+  onInsertBelow,
+  onDuplicate,
+  onMoveUp,
+  onMoveDown,
 }: ItemRowProps) {
   const t = useT()
   const [open, setOpen] = useState(false)
@@ -590,16 +633,17 @@ function ItemRow({
           }
         }}
       />
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        onClick={onRemove}
-        disabled={!canRemove}
-        aria-label={t.actions.remove}
-      >
-        <Trash2 className="size-4" />
-      </Button>
+      <RowActions
+        index={index}
+        count={count}
+        canRemove={canRemove}
+        onInsertAbove={onInsertAbove}
+        onInsertBelow={onInsertBelow}
+        onDuplicate={onDuplicate}
+        onMoveUp={onMoveUp}
+        onMoveDown={onMoveDown}
+        onRemove={onRemove}
+      />
     </div>
   )
 }

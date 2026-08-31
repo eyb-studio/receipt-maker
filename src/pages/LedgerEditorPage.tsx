@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
-import { ArrowLeft, Plus, Trash2 } from "lucide-react"
+import { ArrowLeft, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -10,6 +10,8 @@ import { toast } from "sonner"
 import { useLedgers } from "@/lib/storage"
 import { useT } from "@/i18n/LanguageProvider"
 import { PageHeader } from "@/components/PageHeader"
+import { RowActions } from "@/components/RowActions"
+import { insertRowAt, moveRow } from "@/lib/rows"
 import { toLatinDigits } from "@/lib/digits"
 import { formatAmount, formatMoney } from "@/lib/formatters"
 import type { LedgerRow } from "@/types"
@@ -89,6 +91,19 @@ export function LedgerEditorPage() {
     setRows((prev) => (prev.length === 1 ? prev : prev.filter((r) => r.id !== rowId)))
   }
   const addRow = () => setRows((prev) => [...prev, newDraftRow()])
+  const insertRowAtIndex = (index: number) =>
+    setRows((prev) => insertRowAt(prev, index, newDraftRow()))
+  const duplicateRow = (rowId: string) =>
+    setRows((prev) => {
+      const idx = prev.findIndex((r) => r.id === rowId)
+      if (idx < 0) return prev
+      return insertRowAt(prev, idx + 1, { ...prev[idx], id: crypto.randomUUID() })
+    })
+  const moveRowBy = (rowId: string, offset: number) =>
+    setRows((prev) => {
+      const idx = prev.findIndex((r) => r.id === rowId)
+      return idx < 0 ? prev : moveRow(prev, idx, idx + offset)
+    })
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -231,16 +246,17 @@ export function LedgerEditorPage() {
                   aria-label={t.common.date}
                   onChange={(e) => updateRow(row.id, { date: e.target.value })}
                 />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => removeRow(row.id)}
-                  disabled={rows.length === 1}
-                  aria-label={t.actions.remove}
-                >
-                  <Trash2 className="size-4" />
-                </Button>
+                <RowActions
+                  index={idx}
+                  count={rows.length}
+                  canRemove={rows.length > 1}
+                  onInsertAbove={() => insertRowAtIndex(idx)}
+                  onInsertBelow={() => insertRowAtIndex(idx + 1)}
+                  onDuplicate={() => duplicateRow(row.id)}
+                  onMoveUp={() => moveRowBy(row.id, -1)}
+                  onMoveDown={() => moveRowBy(row.id, 1)}
+                  onRemove={() => removeRow(row.id)}
+                />
               </div>
             ))}
 

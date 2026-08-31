@@ -11,6 +11,8 @@ import { toast } from "sonner"
 import { useManCatalog, useManReceipts } from "@/lib/storage"
 import { useT } from "@/i18n/LanguageProvider"
 import { PageHeader } from "@/components/PageHeader"
+import { RowActions } from "@/components/RowActions"
+import { insertRowAt, moveRow } from "@/lib/rows"
 import { toLatinDigits } from "@/lib/digits"
 import {
   formatAmount,
@@ -171,6 +173,29 @@ export function ManReceiptEditorPage() {
     setItems((prev) => [...prev, row])
   }
 
+  // Spreadsheet-style row insertion: the new row lands exactly where asked and
+  // takes the focus so typing can continue straight away.
+  const insertItemAt = (index: number) => {
+    const row = newDraftItem()
+    focusNameId.current = row.id
+    setItems((prev) => insertRowAt(prev, index, row))
+  }
+
+  const duplicateItem = (itemId: string) => {
+    setItems((prev) => {
+      const idx = prev.findIndex((it) => it.id === itemId)
+      if (idx < 0) return prev
+      return insertRowAt(prev, idx + 1, { ...prev[idx], id: crypto.randomUUID() })
+    })
+  }
+
+  const moveItem = (itemId: string, offset: number) => {
+    setItems((prev) => {
+      const idx = prev.findIndex((it) => it.id === itemId)
+      return idx < 0 ? prev : moveRow(prev, idx, idx + offset)
+    })
+  }
+
   // Enter on the rate field commits the row and jumps to a fresh one.
   const handlePriceEnter = (itemId: string) => {
     const isLast = items[items.length - 1]?.id === itemId
@@ -306,6 +331,7 @@ export function ManReceiptEditorPage() {
               <ItemRow
                 key={item.id}
                 index={idx}
+                count={items.length}
                 item={item}
                 suggestions={catalog}
                 canRemove={items.length > 1}
@@ -316,6 +342,11 @@ export function ManReceiptEditorPage() {
                 onApplySuggestion={(s) => applySuggestion(item.id, s)}
                 onPriceEnter={() => handlePriceEnter(item.id)}
                 onRemove={() => removeItem(item.id)}
+                onInsertAbove={() => insertItemAt(idx)}
+                onInsertBelow={() => insertItemAt(idx + 1)}
+                onDuplicate={() => duplicateItem(item.id)}
+                onMoveUp={() => moveItem(item.id, -1)}
+                onMoveDown={() => moveItem(item.id, 1)}
               />
             ))}
 
@@ -482,6 +513,7 @@ export function ManReceiptEditorPage() {
 
 type ItemRowProps = {
   index: number
+  count: number
   item: DraftItem
   suggestions: CatalogItem[]
   canRemove: boolean
@@ -492,10 +524,16 @@ type ItemRowProps = {
   onApplySuggestion: (s: CatalogItem) => void
   onPriceEnter: () => void
   onRemove: () => void
+  onInsertAbove: () => void
+  onInsertBelow: () => void
+  onDuplicate: () => void
+  onMoveUp: () => void
+  onMoveDown: () => void
 }
 
 function ItemRow({
   index,
+  count,
   item,
   suggestions,
   canRemove,
@@ -506,6 +544,11 @@ function ItemRow({
   onApplySuggestion,
   onPriceEnter,
   onRemove,
+  onInsertAbove,
+  onInsertBelow,
+  onDuplicate,
+  onMoveUp,
+  onMoveDown,
 }: ItemRowProps) {
   const t = useT()
   const [open, setOpen] = useState(false)
@@ -671,16 +714,17 @@ function ItemRow({
       >
         {amount ? formatAmount(amount) : "—"}
       </div>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        onClick={onRemove}
-        disabled={!canRemove}
-        aria-label={t.actions.remove}
-      >
-        <Trash2 className="size-4" />
-      </Button>
+      <RowActions
+        index={index}
+        count={count}
+        canRemove={canRemove}
+        onInsertAbove={onInsertAbove}
+        onInsertBelow={onInsertBelow}
+        onDuplicate={onDuplicate}
+        onMoveUp={onMoveUp}
+        onMoveDown={onMoveDown}
+        onRemove={onRemove}
+      />
     </div>
   )
 }
