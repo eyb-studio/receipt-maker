@@ -11,7 +11,7 @@ import type {
   Receipt,
 } from "@/types"
 
-const KEYS = {
+export const KEYS = {
   company: "receipt-maker:company",
   clients: "receipt-maker:clients",
   products: "receipt-maker:products",

@@ -1,5 +1,5 @@
 import { useRef, useState } from "react"
-import { Upload, X } from "lucide-react"
+import { Download, Share2, Upload, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -23,6 +23,7 @@ import {
   UnsavedChangesPrompt,
 } from "@/hooks/useUnsavedChangesGuard"
 import { toLatinDigits } from "@/lib/digits"
+import { canShareBackup, downloadBackup, shareBackup } from "@/lib/backup"
 import {
   DEFAULT_LEDGER_COLUMNS,
   DEFAULT_PRICE_LIST_CONFIG,
@@ -54,6 +55,43 @@ export function SettingsPage() {
     primary !== company.primaryColor ||
     accent !== company.accentColor
   const blocker = useUnsavedChangesGuard(isDirty)
+
+  // Probed once: the check builds a throwaway File, and the answer cannot
+  // change while the page is open.
+  const [shareable] = useState(canShareBackup)
+
+  const announce = (count: number) => {
+    toast.success(t.settings.backupDone, {
+      description: `${count} ${t.settings.backupDocuments}`,
+    })
+  }
+
+  const handleBackup = () => {
+    const count = downloadBackup()
+    if (count === 0) {
+      toast.error(t.settings.backupEmpty)
+      return
+    }
+    announce(count)
+  }
+
+  // Sends the file straight to the share sheet so it can leave the phone. A
+  // device without file sharing falls back to a download rather than a dead
+  // button.
+  const handleShare = async () => {
+    const { result, count } = await shareBackup()
+    if (count === 0) {
+      toast.error(t.settings.backupEmpty)
+      return
+    }
+    if (result === "cancelled") return
+    if (result === "unsupported") {
+      downloadBackup()
+      toast.warning(t.settings.backupShareFailed)
+      return
+    }
+    announce(count)
+  }
 
   const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -312,6 +350,25 @@ export function SettingsPage() {
                 </SelectContent>
               </Select>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>{t.settings.backup}</CardTitle>
+            <CardDescription>{t.settings.backupDesc}</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-wrap gap-2">
+            {shareable ? (
+              <Button onClick={handleShare}>
+                <Share2 className="size-4" />
+                {t.settings.backupShare}
+              </Button>
+            ) : null}
+            <Button variant="outline" onClick={handleBackup}>
+              <Download className="size-4" />
+              {t.settings.backupAction}
+            </Button>
           </CardContent>
         </Card>
       </div>
